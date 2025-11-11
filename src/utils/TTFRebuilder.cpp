@@ -10,6 +10,7 @@
 #include <set>
 #include <sstream>
 #include <iomanip>
+#include <ctime>
 
 namespace fontmaster {
 
@@ -304,9 +305,8 @@ void TTFRebuilder::rebuildHmtxTable(const std::string& tag) {
         }
     }
     
-    uint16_t lastAdvanceWidth = (numHMetrics > 0 && numHMetrics - 1 < glyphOffsets.size()) 
-                              ? glyphOffsets[numHMetrics - 1].advanceWidth : 500;
-                              
+    // УДАЛЕНО: uint16_t lastAdvanceWidth = (numHMetrics > 0 && numHMetrics - 1 < glyphOffsets.size()) ...
+    
     for (uint16_t i = numHMetrics; i < numGlyphs; ++i) {
         int16_t lsb = (i < glyphOffsets.size()) ? glyphOffsets[i].leftSideBearing : 0;
         setInt16(newHmtxData, numHMetrics * 4 + (i - numHMetrics) * 2, lsb);
@@ -382,25 +382,12 @@ void TTFRebuilder::rebuildPostTable(const std::string& tag) {
     }
 }
 
-void TTFRebuilder::updateGlyfTable() {
-    updateGlyfTable("glyf");
-}
-
-void TTFRebuilder::updateLocaTable() {
-    updateLocaTable("loca");
-}
-
-void TTFRebuilder::updateHmtxTable() {
-    updateHmtxTable("hmtx");
-}
-
-void TTFRebuilder::updateHheaTable() {
-    updateHheaTable("hhea");
-}
-
-void TTFRebuilder::updateMaxpTable() {
-    updateMaxpTable("maxp");
-}
+// УДАЛЕНО: Реализации без параметров - используем версии с параметрами по умолчанию
+// void TTFRebuilder::updateGlyfTable() {
+// void TTFRebuilder::updateLocaTable() {
+// void TTFRebuilder::updateHmtxTable() {
+// void TTFRebuilder::updateHheaTable() {
+// void TTFRebuilder::updateMaxpTable() {
 
 void TTFRebuilder::updateGlyfTable(const std::string& glyfTag) {
     if (tables.find(glyfTag) == tables.end() || !tables[glyfTag].modified) return;
@@ -596,7 +583,8 @@ uint32_t TTFRebuilder::parseCompositeGlyphLength(const std::vector<uint8_t>& dat
         uint16_t flags = getUInt16(data, offset + currentPos);
         currentPos += 2;
         
-        uint16_t glyphIndex = getUInt16(data, offset + currentPos);
+        // УДАЛЕНО: uint16_t glyphIndex = getUInt16(data, offset + currentPos);
+        getUInt16(data, offset + currentPos); // Просто читаем, но не используем
         currentPos += 2;
         
         if (flags & 0x0001) {
@@ -653,9 +641,11 @@ void TTFRebuilder::calculateGlyphMetrics() {
             glyph.leftSideBearing = 0;
         } else {
             int16_t xMin = getInt16(glyfData, glyph.offset + 2);
-            int16_t yMin = getInt16(glyfData, glyph.offset + 4);
+            // УДАЛЕНО: int16_t yMin = getInt16(glyfData, glyph.offset + 4);
+            getInt16(glyfData, glyph.offset + 4); // Просто читаем yMin
             int16_t xMax = getInt16(glyfData, glyph.offset + 6);
-            int16_t yMax = getInt16(glyfData, glyph.offset + 8);
+            // УДАЛЕНО: int16_t yMax = getInt16(glyfData, glyph.offset + 8);
+            getInt16(glyfData, glyph.offset + 8); // Просто читаем yMax
             
             int16_t glyphWidth = xMax - xMin;
             glyph.advanceWidth = std::max(static_cast<uint16_t>(glyphWidth + 50), static_cast<uint16_t>(500));
@@ -693,9 +683,10 @@ void TTFRebuilder::calculateHMetrics() {
     }
     
     numHMetrics = std::min(optimalHMetrics, numGlyphs);
-    if (numHMetrics > 0xFFFF) {
-        numHMetrics = 0xFFFF;
-    }
+    // ИСПРАВЛЕНО: убрана лишняя проверка, так как numHMetrics всегда <= numGlyphs <= 0xFFFF
+    // if (numHMetrics > 0xFFFF) {
+    //     numHMetrics = 0xFFFF;
+    // }
     
     std::cout << "TTFRebuilder: Optimized h-metrics: " << numHMetrics 
               << " (unique advance widths: " << uniqueAdvanceWidths.size() << ")" << std::endl;
@@ -1001,7 +992,8 @@ void TTFRebuilder::updateNameTableChecksum() {
         record.length = getUInt16(nameData, recordOffset + 8);
         record.offset = getUInt16(nameData, recordOffset + 10);
         
-        if (stringOffset + record.offset + record.length > nameData.size()) {
+        // ИСПРАВЛЕНО: приведение типов для сравнения
+        if (static_cast<size_t>(stringOffset + record.offset + record.length) > nameData.size()) {
             std::cerr << "TTFRebuilder: Fixing invalid string offset in name record " << i << std::endl;
             record.offset = static_cast<uint16_t>(stringStorage.size());
         }
@@ -1094,6 +1086,7 @@ void TTFRebuilder::updatePostTableFormat2() {
     }
     
     std::vector<uint8_t> newPostData;
+    // ИСПРАВЛЕНО: приведение типов для сравнения
     size_t newSize = 34 + numGlyphs * 2;
     newPostData.resize(newSize);
     
@@ -1108,7 +1101,8 @@ void TTFRebuilder::updatePostTableFormat2() {
     setUInt32(newPostData, 28, maxMemType1);
     setUInt16(newPostData, 32, numGlyphs);
     
-    if (postData.size() >= 34 + numberOfGlyphs * 2) {
+    // ИСПРАВЛЕНО: приведение типов для сравнения
+    if (postData.size() >= static_cast<size_t>(34 + numberOfGlyphs * 2)) {
         for (uint16_t i = 0; i < numGlyphs; ++i) {
             if (i < numberOfGlyphs) {
                 uint16_t nameIndex = getUInt16(postData, 34 + i * 2);
@@ -1192,7 +1186,8 @@ uint16_t TTFRebuilder::getUnicodeFromCmap(uint16_t glyphIndex) {
     const auto& cmapData = cmapIt->second.data;
     if (cmapData.size() < 4) return 0xFFFF;
     
-    uint16_t version = getUInt16(cmapData, 0);
+    // УДАЛЕНО: uint16_t version = getUInt16(cmapData, 0);
+    getUInt16(cmapData, 0); // Просто читаем version
     uint16_t numTables = getUInt16(cmapData, 2);
     
     for (uint16_t i = 0; i < numTables; ++i) {
@@ -1225,8 +1220,10 @@ uint16_t TTFRebuilder::getUnicodeFromCmap(uint16_t glyphIndex) {
 uint16_t TTFRebuilder::findGlyphInFormat4Subtable(const std::vector<uint8_t>& cmapData, uint32_t offset, uint16_t glyphIndex) {
     if (offset + 14 > cmapData.size()) return 0xFFFF;
     
-    uint16_t length = getUInt16(cmapData, offset + 2);
-    uint16_t language = getUInt16(cmapData, offset + 4);
+    // УДАЛЕНО: uint16_t length = getUInt16(cmapData, offset + 2);
+    getUInt16(cmapData, offset + 2); // Просто читаем length
+    // УДАЛЕНО: uint16_t language = getUInt16(cmapData, offset + 4);
+    getUInt16(cmapData, offset + 4); // Просто читаем language
     uint16_t segCountX2 = getUInt16(cmapData, offset + 6);
     uint16_t segCount = segCountX2 / 2;
     
@@ -1234,7 +1231,7 @@ uint16_t TTFRebuilder::findGlyphInFormat4Subtable(const std::vector<uint8_t>& cm
     uint32_t startCountOffset = endCountOffset + segCountX2 + 2;
     uint32_t idDeltaOffset = startCountOffset + segCountX2;
     uint32_t idRangeOffsetOffset = idDeltaOffset + segCountX2;
-    uint32_t glyphIdArrayOffset = idRangeOffsetOffset + segCountX2;
+    // УДАЛЕНО: uint32_t glyphIdArrayOffset = idRangeOffsetOffset + segCountX2;
     
     for (uint16_t i = 0; i < segCount; ++i) {
         uint16_t endCount = getUInt16(cmapData, endCountOffset + i * 2);
@@ -1267,8 +1264,10 @@ uint16_t TTFRebuilder::findGlyphInFormat12Subtable(const std::vector<uint8_t>& c
     uint16_t format = getUInt16(cmapData, offset);
     if (format != 12) return 0xFFFF;
     
-    uint32_t length = getUInt32(cmapData, offset + 4);
-    uint32_t language = getUInt32(cmapData, offset + 8);
+    // УДАЛЕНО: uint32_t length = getUInt32(cmapData, offset + 4);
+    getUInt32(cmapData, offset + 4); // Просто читаем length
+    // УДАЛЕНО: uint32_t language = getUInt32(cmapData, offset + 8);
+    getUInt32(cmapData, offset + 8); // Просто читаем language
     uint32_t numGroups = getUInt32(cmapData, offset + 12);
     
     uint32_t groupsOffset = offset + 16;
@@ -1384,7 +1383,7 @@ uint16_t TTFRebuilder::generateUnicodeGlyphNameIndex(uint16_t unicodeValue) {
     return nextUnicodeNameIndex++;
 }
 
-uint16_t TTFRebuilder::generateCompositeGlyphName(uint16_t glyphIndex) {
+uint16_t TTFRebuilder::generateCompositeGlyphName(uint16_t /*glyphIndex*/) {
     // Для составных глифов используем имена по шаблону compXXXX
     static uint16_t nextCompositeNameIndex = 1000;
     
@@ -1397,7 +1396,7 @@ uint16_t TTFRebuilder::generateCompositeGlyphName(uint16_t glyphIndex) {
     return nextCompositeNameIndex++;
 }
 
-uint16_t TTFRebuilder::generateDefaultGlyphName(uint16_t glyphIndex) {
+uint16_t TTFRebuilder::generateDefaultGlyphName(uint16_t /*glyphIndex*/) {
     // Для остальных глифов используем имена по шаблону gXXXX
     static uint16_t nextDefaultNameIndex = 2000;
     
