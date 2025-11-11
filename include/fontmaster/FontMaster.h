@@ -34,7 +34,10 @@ struct CBDTStrike {
 class Font {
 public:
     virtual ~Font() = default;
-    
+     // Добавьте эти виртуальные методы
+    virtual bool load() = 0;
+    virtual const std::vector<uint8_t>& getFontData() const = 0;
+    virtual void setFontData(const std::vector<uint8_t>& data) = 0;
     static std::unique_ptr<Font> load(const std::string& filepath);
     
     virtual FontFormat getFormat() const = 0;
@@ -93,11 +96,11 @@ public:
 };
 
 // Добавляем в конец файла
-class TTFRebuilder {
-public:
-    virtual ~TTFRebuilder() = default;
-    virtual std::vector<uint8_t> rebuild() = 0;
-};
+//class TTFRebuilder {
+//public:
+//    virtual ~TTFRebuilder() = default;
+//    virtual std::vector<uint8_t> rebuild() = 0;
+//};
 
 
 } // namespace fontmaster
