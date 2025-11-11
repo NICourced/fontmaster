@@ -1,6 +1,7 @@
 #include "fontmaster/TTFUtils.h"
 #include <vector>
 #include <stdexcept>
+#include <iostream>
 
 namespace fontmaster {
 namespace utils {

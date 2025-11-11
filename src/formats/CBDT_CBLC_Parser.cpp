@@ -1,10 +1,10 @@
 #include "fontmaster/FontMaster.h"
 #include "fontmaster/TTFUtils.h"
-#include "utils/CMAPParser.h"
-#include "utils/NAMEParser.h"
-#include "utils/POSTParser.h"
-#include "utils/MAXPParser.h"
-#include "utils/CFFParser.h"
+#include "fontmaster/CMAPParser.h"
+#include "fontmaster/NAMEParser.h"
+#include "fontmaster/POSTParser.h"
+#include "fontmaster/MAXPParser.h"
+#include "fontmaster/CFFParser.h"
 #include <vector>
 #include <map>
 #include <algorithm>
