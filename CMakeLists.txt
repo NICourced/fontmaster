@@ -134,32 +134,32 @@ install(DIRECTORY include/fontmaster
 )
 
 # Package configuration (optional)
-include(CMakePackageConfigHelpers)
+#include(CMakePackageConfigHelpers)
 
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY AnyNewerVersion
-)
+#write_basic_package_version_file(
+#    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake"
+#    VERSION ${PROJECT_VERSION}
+#    COMPATIBILITY AnyNewerVersion
+#)
 
-configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fontmaster-config.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake
-    INSTALL_DESTINATION lib/cmake/fontmaster
-)
+#configure_package_config_file(
+#    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fontmaster-config.cmake.in
+#    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake
+#    INSTALL_DESTINATION lib/cmake/fontmaster
+#)
 
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake
-    DESTINATION lib/cmake/fontmaster
-)
+#install(FILES
+#    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake
+#    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake
+#    DESTINATION lib/cmake/fontmaster
+#)
 
 # Export targets
-export(EXPORT fontmaster-targets
-    FILE "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-targets.cmake"
-)
+#export(EXPORT fontmaster-targets
+#    FILE "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-targets.cmake"
+#)
 
-install(EXPORT fontmaster-targets
-    FILE fontmaster-targets.cmake
-    DESTINATION lib/cmake/fontmaster
-)
+#install(EXPORT fontmaster-targets
+#    FILE fontmaster-targets.cmake
+#    DESTINATION lib/cmake/fontmaster
+#)

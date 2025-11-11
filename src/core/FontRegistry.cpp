@@ -1,6 +1,7 @@
 #include "fontmaster/FontMaster.h"
 #include <algorithm>
 #include <memory>
+#include <map>
 
 namespace fontmaster {
 

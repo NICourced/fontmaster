@@ -1,7 +1,7 @@
 #ifndef CBDT_CBLC_FONT_H
 #define CBDT_CBLC_FONT_H
 
-#include "fontmaster/Font.h"
+#include "fontmaster/FontMaster.h"
 #include "fontmaster/CBDT_CBLC_Parser.h"
 #include <string>
 #include <vector>
