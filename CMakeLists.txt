@@ -1,122 +1,165 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.10)
 project(fontmaster VERSION 1.0.0 LANGUAGES CXX)
 
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Настройки компиляции
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-# Все бинарники и библиотеки в папку build/
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(FONTMASTER_DEBUG)
-    add_compile_options(-g -O0 -DDEBUG)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g")
-else()
-    add_compile_options(-O2 -DNDEBUG)
-endif()
-
-# Предупреждения
+# Compiler warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        add_compile_options(-Wno-maybe-uninitialized)
-    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
+elseif(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-# Включение всех исходных файлов
-set(SOURCES
+# Include directories
+include_directories(include)
+
+# Core library sources
+set(CORE_SOURCES
     src/core/FontMaster.cpp
-    src/utils/TTFUtils.cpp
-    src/utils/TTFRebuilder.cpp
+    src/core/FontRegistry.cpp
+)
+
+# Utils sources
+set(UTILS_SOURCES
+    src/utils/CFFParser.cpp
     src/utils/CMAPParser.cpp
+    src/utils/MAXPParser.cpp
     src/utils/NAMEParser.cpp
     src/utils/POSTParser.cpp
-    src/utils/MAXPParser.cpp
-    src/utils/CFFParser.cpp
-    src/formats/CBDT_CBLC_Parser.cpp
+    src/utils/TTFRebuilder.cpp
+    src/utils/TTFUtils.cpp
+)
+
+# Format handlers sources
+set(FORMATS_SOURCES
+    src/formats/CBDT_CBLC_Font.cpp
     src/formats/CBDT_CBLC_Handler.cpp
+    src/formats/CBDT_CBLC_Parser.cpp
     src/formats/CBDT_CBLC_Rebuilder.cpp
-    src/formats/SBIX_Handler.cpp
+    src/formats/CBDT_CBLC_Registration.cpp
+    src/formats/ColorFontHandler.cpp
     src/formats/COLR_CPAL_Handler.cpp
+    src/formats/SBIX_Handler.cpp
     src/formats/SVG_Handler.cpp
 )
 
-set(HEADERS
-    include/fontmaster/FontMaster.h
-    include/fontmaster/TTFUtils.h
-    include/fontmaster/TTFRebuilder.h
-    include/fontmaster/CMAPParser.h
-    include/fontmaster/NAMEParser.h
-    include/fontmaster/POSTParser.h
-    include/fontmaster/MAXPParser.h
-    include/fontmaster/CFFParser.h
-    src/formats/CBDT_CBLC_Rebuilder.h
+# Combine all sources
+set(ALL_SOURCES
+    ${CORE_SOURCES}
+    ${UTILS_SOURCES}
+    ${FORMATS_SOURCES}
 )
 
-# Основная библиотека
-add_library(fontmaster SHARED ${SOURCES} ${HEADERS})
+# Create main library
+add_library(fontmaster SHARED ${ALL_SOURCES})
 
+# Include directories for the library
 target_include_directories(fontmaster 
     PUBLIC 
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
     PRIVATE
-        src/core
-        src/utils
-        src/formats
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_compile_definitions(fontmaster PRIVATE FONTMASTER_LIBRARY)
+# Set library properties
+set_target_properties(fontmaster PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 1
+    OUTPUT_NAME "fontmaster"
+)
 
-# CLI приложение
-add_executable(fontmaster-cli
+# CLI executable
+add_executable(fontmaster_cli
     src/cli/main.cpp
+    src/cli/CommandProcessor.cpp
 )
 
-target_link_libraries(fontmaster-cli fontmaster)
+target_link_libraries(fontmaster_cli fontmaster)
 
-# Поиск Qt6
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+# Qt GUI executable (optional - requires Qt)
+find_package(Qt5 COMPONENTS Core Widgets QUIET)
+if(Qt5_FOUND)
+    qt5_wrap_cpp(QT_HEADERS
+        src/qt/MainWindow.h
+    )
+    
+    add_executable(fontmaster_qt
+        src/qt/main.cpp
+        src/qt/MainWindow.cpp
+        ${QT_HEADERS}
+    )
+    
+    target_link_libraries(fontmaster_qt fontmaster Qt5::Core Qt5::Widgets)
+    
+    # Set Qt specific properties
+    set_target_properties(fontmaster_qt PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+    )
+else()
+    message(WARNING "Qt5 not found - skipping fontmaster_qt target")
+endif()
 
-# Qt приложение
-add_executable(fontmaster-qt
-    src/qt/main.cpp
-    src/qt/MainWindow.cpp
+# Tests (optional)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cbdt_cblc.cpp")
+    enable_testing()
+    
+    add_executable(fontmaster_tests
+        tests/test_cbdt_cblc.cpp
+    )
+    
+    target_link_libraries(fontmaster_tests fontmaster)
+    
+    add_test(NAME CBDT_CBLCTests COMMAND fontmaster_tests)
+endif()
+
+# Installation
+install(TARGETS fontmaster fontmaster_cli
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
-target_link_libraries(fontmaster-qt 
-    Qt6::Core 
-    Qt6::Widgets 
-    Qt6::Gui 
-    fontmaster
+if(TARGET fontmaster_qt)
+    install(TARGETS fontmaster_qt
+        RUNTIME DESTINATION bin
+    )
+endif()
+
+install(DIRECTORY include/fontmaster
+    DESTINATION include
 )
 
-# Отключаем автоматическую установку
-# install(TARGETS ...) - закомментировано
+# Package configuration (optional)
+include(CMakePackageConfigHelpers)
 
-# Информация о сборке
-message(STATUS "FontMaster build configuration:")
-message(STATUS "  Version: ${PROJECT_VERSION}")
-message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
-message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  Output directory: ${CMAKE_BINARY_DIR}")
-
-# Дополнительная цель для копирования необходимых файлов
-add_custom_target(copy-resources ALL
-    COMMENT "Copying resources to build directory"
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
 )
 
-# Сообщение о завершении сборки
-add_custom_command(TARGET copy-resources POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Build completed successfully!"
-    COMMAND ${CMAKE_COMMAND} -E echo "Binaries are in: ${CMAKE_BINARY_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} -E echo "Usage:"
-    COMMAND ${CMAKE_COMMAND} -E echo "  CLI: ./fontmaster-cli --help"
-    COMMAND ${CMAKE_COMMAND} -E echo "  GUI: ./fontmaster-qt"
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fontmaster-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake
+    INSTALL_DESTINATION lib/cmake/fontmaster
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake
+    DESTINATION lib/cmake/fontmaster
+)
+
+# Export targets
+export(EXPORT fontmaster-targets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-targets.cmake"
+)
+
+install(EXPORT fontmaster-targets
+    FILE fontmaster-targets.cmake
+    DESTINATION lib/cmake/fontmaster
 )
