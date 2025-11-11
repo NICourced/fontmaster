@@ -5,20 +5,20 @@
 namespace fontmaster {
 namespace utils {
 
-CFFParser::CFFParser(const std::vector<uint8_t>& fontData) : fontData(fontData) {}
+CFFParser::CFFParser(const std::vector<uint8_t>& data, uint32_t offset) 
+    : fontData(data), baseOffset(offset) {}
 
 bool CFFParser::parse() {
-    if (fontData.size() < 4) {
+    if (fontData.size() < baseOffset + 4) {
         std::cerr << "CFF: Font data too small" << std::endl;
         return false;
     }
 
-    size_t offset = 0;
-    const uint8_t* current = fontData.data();
+    size_t offset = baseOffset;
+    const uint8_t* current = fontData.data() + baseOffset;
 
     // Parse CFF header
     uint8_t major = current[0];
-    // Убраны неиспользуемые переменные
     (void)current[1]; // minor
     uint8_t hdrSize = current[2];
     (void)current[3]; // offSize
@@ -28,7 +28,7 @@ bool CFFParser::parse() {
         return false;
     }
 
-    offset = hdrSize;
+    offset = baseOffset + hdrSize;
 
     // Parse Name INDEX
     if (!parseIndex(offset)) {
@@ -76,14 +76,14 @@ bool CFFParser::parseIndex(size_t& offset) {
     }
 
     uint8_t offSize = data[2];
-    size_t indexStart = offset + 3;
-    size_t objectDataStart = indexStart + (count + 1) * offSize;
+    // Убраны неиспользуемые переменные
+    // size_t objectDataStart = indexStart + (count + 1) * offSize;
 
     // Calculate total index size
     size_t indexSize = 2 + 1 + (count + 1) * offSize;
 
     // Read offsets to calculate object data size
-    uint32_t firstOffset = readOffset(data + 3, offSize);
+    (void)readOffset(data + 3, offSize); // firstOffset
     uint32_t lastOffset = readOffset(data + 3 + count * offSize, offSize);
     size_t objectDataSize = lastOffset - 1;
 

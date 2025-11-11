@@ -1,23 +1,27 @@
-#pragma once
+#ifndef CFFPARSER_H
+#define CFFPARSER_H
+
 #include <vector>
-#include <map>
-#include <string>
 #include <cstdint>
 
 namespace fontmaster {
 namespace utils {
 
 class CFFParser {
-private:
-    const std::vector<uint8_t>& fontData;
-    uint32_t cffOffset;
-    std::map<uint16_t, std::string> glyphIDToName;
-    
 public:
-    CFFParser(const std::vector<uint8_t>& data, uint32_t offset);
+    CFFParser(const std::vector<uint8_t>& data, uint32_t offset = 0);
+    
     bool parse();
-    const std::map<uint16_t, std::string>& getGlyphNames() const;
+    
+private:
+    std::vector<uint8_t> fontData;
+    uint32_t baseOffset;
+
+    bool parseIndex(size_t& offset);
+    uint32_t readOffset(const uint8_t* data, uint8_t offSize);
 };
 
-}
-}
+} // namespace utils
+} // namespace fontmaster
+
+#endif // CFFPARSER_H
