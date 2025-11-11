@@ -45,6 +45,16 @@ bool CMAPParser::parse() {
     return true;
 }
 
+uint16_t CMAPParser::getGlyphIndex(uint32_t charCode) const {
+    auto it = charToGlyph.find(charCode);
+    return (it != charToGlyph.end()) ? it->second : 0;
+}
+
+std::set<uint32_t> CMAPParser::getCharCodes(uint16_t glyphIndex) const {
+    auto it = glyphToChar.find(glyphIndex);
+    return (it != glyphToChar.end()) ? it->second : std::set<uint32_t>();
+}
+
 void CMAPParser::parseSubtable(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
     if (offset + 2 > fontData.size()) {
         return;
@@ -68,15 +78,17 @@ void CMAPParser::parseSubtable(uint32_t offset, uint16_t platformID, uint16_t en
     }
 }
 
-void CMAPParser::parseFormat0(uint32_t offset, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat0(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
     if (offset + 6 + 256 > fontData.size()) {
         std::cerr << "CMAP: Format 0 table too small" << std::endl;
         return;
     }
 
-    // Убраны неиспользуемые переменные
-    readUInt16(fontData.data() + offset + 2); // length
-    readUInt16(fontData.data() + offset + 4); // language
+    // Read but don't use these variables to avoid warnings
+    (void)readUInt16(fontData.data() + offset + 2); // length
+    (void)readUInt16(fontData.data() + offset + 4); // language
+    (void)platformID;
+    (void)encodingID;
 
     for (int i = 0; i < 256; ++i) {
         uint8_t glyphIndex = fontData[offset + 6 + i];
@@ -89,15 +101,17 @@ void CMAPParser::parseFormat0(uint32_t offset, uint16_t /*platformID*/, uint16_t
     std::cout << "CMAP: Format 0 parsed, " << charToGlyph.size() << " mappings" << std::endl;
 }
 
-void CMAPParser::parseFormat4(uint32_t offset, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat4(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
     if (offset + 14 > fontData.size()) {
         std::cerr << "CMAP: Format 4 table too small" << std::endl;
         return;
     }
 
-    // Убраны неиспользуемые переменные
-    readUInt16(fontData.data() + offset + 2); // length
-    readUInt16(fontData.data() + offset + 4); // language
+    // Read but don't use these variables to avoid warnings
+    (void)readUInt16(fontData.data() + offset + 2); // length
+    (void)readUInt16(fontData.data() + offset + 4); // language
+    (void)platformID;
+    (void)encodingID;
 
     uint16_t segCountX2 = readUInt16(fontData.data() + offset + 6);
     uint16_t segCount = segCountX2 / 2;
@@ -143,15 +157,17 @@ void CMAPParser::parseFormat4(uint32_t offset, uint16_t /*platformID*/, uint16_t
     std::cout << "CMAP: Format 4 parsed, " << charToGlyph.size() << " mappings" << std::endl;
 }
 
-void CMAPParser::parseFormat6(uint32_t offset, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat6(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
     if (offset + 8 > fontData.size()) {
         std::cerr << "CMAP: Format 6 table too small" << std::endl;
         return;
     }
 
-    // Убраны неиспользуемые переменные
-    readUInt16(fontData.data() + offset + 2); // length
-    readUInt16(fontData.data() + offset + 4); // language
+    // Read but don't use these variables to avoid warnings
+    (void)readUInt16(fontData.data() + offset + 2); // length
+    (void)readUInt16(fontData.data() + offset + 4); // language
+    (void)platformID;
+    (void)encodingID;
 
     uint16_t firstCode = readUInt16(fontData.data() + offset + 6);
     uint16_t entryCount = readUInt16(fontData.data() + offset + 8);
@@ -173,15 +189,17 @@ void CMAPParser::parseFormat6(uint32_t offset, uint16_t /*platformID*/, uint16_t
     std::cout << "CMAP: Format 6 parsed, " << charToGlyph.size() << " mappings" << std::endl;
 }
 
-void CMAPParser::parseFormat12(uint32_t offset, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat12(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
     if (offset + 16 > fontData.size()) {
         std::cerr << "CMAP: Format 12 table too small" << std::endl;
         return;
     }
 
-    // Убраны неиспользуемые переменные
-    readUInt32(fontData.data() + offset + 4); // length
-    readUInt32(fontData.data() + offset + 8); // language
+    // Read but don't use these variables to avoid warnings
+    (void)readUInt32(fontData.data() + offset + 4); // length
+    (void)readUInt32(fontData.data() + offset + 8); // language
+    (void)platformID;
+    (void)encodingID;
 
     uint32_t numGroups = readUInt32(fontData.data() + offset + 12);
 
@@ -206,15 +224,17 @@ void CMAPParser::parseFormat12(uint32_t offset, uint16_t /*platformID*/, uint16_
     std::cout << "CMAP: Format 12 parsed, " << charToGlyph.size() << " mappings" << std::endl;
 }
 
-void CMAPParser::parseFormat13(uint32_t offset, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat13(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
     if (offset + 16 > fontData.size()) {
         std::cerr << "CMAP: Format 13 table too small" << std::endl;
         return;
     }
 
-    // Убраны неиспользуемые переменные
-    readUInt32(fontData.data() + offset + 4); // length
-    readUInt32(fontData.data() + offset + 8); // language
+    // Read but don't use these variables to avoid warnings
+    (void)readUInt32(fontData.data() + offset + 4); // length
+    (void)readUInt32(fontData.data() + offset + 8); // language
+    (void)platformID;
+    (void)encodingID;
 
     uint32_t numGroups = readUInt32(fontData.data() + offset + 12);
 
@@ -238,20 +258,31 @@ void CMAPParser::parseFormat13(uint32_t offset, uint16_t /*platformID*/, uint16_
     std::cout << "CMAP: Format 13 parsed, " << charToGlyph.size() << " mappings" << std::endl;
 }
 
-// Пустые реализации для неподдерживаемых форматов
-void CMAPParser::parseFormat2(uint32_t /*offset*/, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat2(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
+    (void)offset;
+    (void)platformID;
+    (void)encodingID;
     std::cout << "CMAP: Format 2 not implemented" << std::endl;
 }
 
-void CMAPParser::parseFormat8(uint32_t /*offset*/, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat8(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
+    (void)offset;
+    (void)platformID;
+    (void)encodingID;
     std::cout << "CMAP: Format 8 not implemented" << std::endl;
 }
 
-void CMAPParser::parseFormat10(uint32_t /*offset*/, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat10(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
+    (void)offset;
+    (void)platformID;
+    (void)encodingID;
     std::cout << "CMAP: Format 10 not implemented" << std::endl;
 }
 
-void CMAPParser::parseFormat14(uint32_t /*offset*/, uint16_t /*platformID*/, uint16_t /*encodingID*/) {
+void CMAPParser::parseFormat14(uint32_t offset, uint16_t platformID, uint16_t encodingID) {
+    (void)offset;
+    (void)platformID;
+    (void)encodingID;
     std::cout << "CMAP: Format 14 not implemented" << std::endl;
 }
 
