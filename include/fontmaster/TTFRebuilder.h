@@ -1,5 +1,5 @@
-#ifndef TTFRebuilder_H
-#define TTFRebuilder_H
+#ifndef FONTMASTER_TTFREBUILDER_H
+#define FONTMASTER_TTFREBUILDER_H
 
 #include <vector>
 #include <string>
@@ -7,6 +7,7 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
+#include <stdexcept>
 
 namespace fontmaster {
 
@@ -19,6 +20,7 @@ public:
     void markTableModified(const std::string& tag);
     void setTableData(const std::string& tag, const std::vector<uint8_t>& data);
     const std::vector<uint8_t>* getTableData(const std::string& tag) const;
+    bool hasTable(const std::string& tag) const;
     std::vector<uint8_t> rebuild();
 
     // Методы для работы со специфичными таблицами
@@ -36,6 +38,13 @@ public:
     // Методы для расчета метрик
     void calculateGlyphOffsets();
     void calculateHMetrics();
+    void setNumGlyphs(uint16_t newNumGlyphs);
+    void setNumberOfHMetrics(uint16_t newNumHMetrics);
+    
+    // Информация о шрифте
+    uint16_t getNumGlyphs() const { return numGlyphs; }
+    uint16_t getNumberOfHMetrics() const { return numHMetrics; }
+    const std::vector<std::string>& getTableOrder() const { return tableOrder; }
 
 protected:
     virtual void rebuildTable(const std::string& tag);
@@ -54,6 +63,9 @@ private:
     struct GlyphInfo {
         uint32_t offset;
         uint32_t length;
+        int16_t leftSideBearing;
+        uint16_t advanceWidth;
+        bool isEmpty;
     };
 
     std::vector<uint8_t> originalData;
@@ -64,6 +76,7 @@ private:
     std::vector<GlyphInfo> glyphOffsets;
     uint16_t numGlyphs;
     uint16_t numHMetrics;
+    bool locaShortFormat;
 
     void parseOriginalStructure();
     void updateTableOffsets();
@@ -79,23 +92,35 @@ private:
     void rebuildMaxpTable(const std::string& tag);
     void rebuildNameTable(const std::string& tag);
     void rebuildOS2Table(const std::string& tag);
+    void rebuildHeadTable(const std::string& tag);
+    void rebuildPostTable(const std::string& tag);
     
     // Вспомогательные методы
     uint16_t getUInt16(const std::vector<uint8_t>& data, size_t offset) const;
     uint32_t getUInt32(const std::vector<uint8_t>& data, size_t offset) const;
     int16_t getInt16(const std::vector<uint8_t>& data, size_t offset) const;
-    void setUInt16(std::vector<uint8_t>& data, size_t offset, uint16_t value) const;
-    void setUInt32(std::vector<uint8_t>& data, size_t offset, uint32_t value) const;
-    void setInt16(std::vector<uint8_t>& data, size_t offset, int16_t value) const;
+    void setUInt16(std::vector<uint8_t>& data, size_t offset, uint16_t value);
+    void setUInt32(std::vector<uint8_t>& data, size_t offset, uint32_t value);
+    void setInt16(std::vector<uint8_t>& data, size_t offset, int16_t value);
 
     // Методы для парсинга таблиц
     bool parseLocaTable();
     bool parseMaxpTable();
     bool parseHheaTable();
-    void updateNumGlyphs(uint16_t newNumGlyphs);
-    void updateNumberOfHMetrics(uint16_t newNumHMetrics);
+    bool parseHeadTable();
+    void parseGlyfTable();
+    
+    // Методы расчета метрик
+    void calculateGlyphMetrics();
+    void recalculateFontMetrics();
+    void updateOS2Metrics();
+    void updateHheaMetrics();
+    
+    // Валидация
+    void validateTableData(const std::string& tag, size_t minSize) const;
+    void validateGlyphData() const;
 };
 
 } // namespace fontmaster
 
-#endif
+#endif // FONTMASTER_TTFREBUILDER_H
