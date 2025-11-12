@@ -2,208 +2,25 @@
 #include "fontmaster/TTFUtils.h"
 #include <iostream>
 #include <algorithm>
+#include <cstring>
 
 namespace fontmaster {
 
-std::vector<uint8_t> CBDT_CBLC_Rebuilder::rebuild() {
-    std::vector<uint8_t> newCBLCTable;
-    std::vector<uint8_t> newCBDTTable;
-    
-    rebuildCBLCTable(newCBLCTable);
-    rebuildCBDTTable(newCBDTTable);
-    
-    return createUpdatedFont(newCBLCTable, newCBDTTable);
-}
+using namespace fontmaster::utils;
 
-void CBDT_CBLC_Rebuilder::rebuildCBLCTable(std::vector<uint8_t>& cblcData) {
-    appendUInt32(cblcData, 0x00020000); // version
-    appendUInt16(cblcData, static_cast<uint16_t>(strikes.size())); // numStrikes
-    
-    std::vector<uint32_t> strikeOffsets;
-    for (size_t i = 0; i < strikes.size(); ++i) {
-        strikeOffsets.push_back(0);
-        appendUInt32(cblcData, 0); // placeholder
-    }
-    
-    size_t strikeIndex = 0;
-    for (const auto& strikePair : strikes) {
-        strikeOffsets[strikeIndex] = cblcData.size();
-        rebuildStrike(cblcData, strikePair.second);
-        strikeIndex++;
-    }
-    
-    for (size_t i = 0; i < strikes.size(); ++i) {
-        uint32_t offsetPos = 8 + i * 4;
-        setUInt32(cblcData, offsetPos, strikeOffsets[i]);
-    }
-}
-
-void CBDT_CBLC_Rebuilder::rebuildStrike(std::vector<uint8_t>& cblcData, const StrikeRecord& strike) {
-    size_t strikeStart = cblcData.size();
-    
-    appendUInt16(cblcData, strike.ppem);
-    appendUInt16(cblcData, strike.resolution);
-    appendUInt32(cblcData, 0); // colorRef
-    appendUInt16(cblcData, 72); // hori (default)
-    appendUInt16(cblcData, 72); // vert (default)
-    
-    uint16_t startGlyph = 0xFFFF;
-    uint16_t endGlyph = 0;
-    
-    for (uint16_t glyphID : strike.glyphIDs) {
-        if (std::find(removedGlyphs.begin(), removedGlyphs.end(), glyphID) == removedGlyphs.end()) {
-            if (glyphID < startGlyph) startGlyph = glyphID;
-            if (glyphID > endGlyph) endGlyph = glyphID;
-        }
-    }
-    
-    if (startGlyph == 0xFFFF) {
-        startGlyph = endGlyph = 0;
-    }
-    
-    appendUInt16(cblcData, startGlyph);
-    appendUInt16(cblcData, endGlyph);
-    appendUInt16(cblcData, strike.ppem); // ppemX
-    appendUInt16(cblcData, strike.ppem); // ppemY
-    cblcData.push_back(1); // bitDepth
-    appendUInt16(cblcData, 0); // flags
-    
-    size_t arrayOffsetPos = cblcData.size();
-    appendUInt32(cblcData, 0); // placeholder
-    
-    appendUInt32(cblcData, 1); // numberOfIndexSubTables
-    appendUInt32(cblcData, 0); // colorRef
-    
-    uint32_t arrayOffset = cblcData.size() - strikeStart;
-    setUInt32(cblcData, arrayOffsetPos, arrayOffset);
-    
-    rebuildIndexSubtable1(cblcData, strike);
-}
-
-void CBDT_CBLC_Rebuilder::rebuildIndexSubtable1(std::vector<uint8_t>& cblcData, const StrikeRecord& strike) {
-    size_t subtableStart = cblcData.size();
-    
-    uint16_t firstGlyph = 0xFFFF;
-    uint16_t lastGlyph = 0;
-    
-    for (uint16_t glyphID : strike.glyphIDs) {
-        if (std::find(removedGlyphs.begin(), removedGlyphs.end(), glyphID) == removedGlyphs.end()) {
-            if (glyphID < firstGlyph) firstGlyph = glyphID;
-            if (glyphID > lastGlyph) lastGlyph = glyphID;
-        }
-    }
-    
-    if (firstGlyph == 0xFFFF) {
-        firstGlyph = lastGlyph = 0;
-    }
-    
-    appendUInt16(cblcData, firstGlyph);
-    appendUInt16(cblcData, lastGlyph);
-    
-    size_t additionalOffsetPos = cblcData.size();
-    appendUInt32(cblcData, 0); // placeholder
-    
-    uint32_t additionalOffset = cblcData.size() - subtableStart;
-    setUInt32(cblcData, additionalOffsetPos, additionalOffset);
-    
-    appendUInt16(cblcData, 1); // indexFormat
-    appendUInt16(cblcData, 17); // imageFormat (PNG with small metrics)
-    
-    size_t imageDataOffsetPos = cblcData.size();
-    appendUInt32(cblcData, 0); // placeholder
-    
-    uint8_t imageSize = 0;
-    int8_t bearingX = 0;
-    int8_t bearingY = 0;
-    uint8_t advance = 0;
-    
-    // Находим максимальный размер изображения и метрики
-    for (uint16_t glyphID : strike.glyphIDs) {
-        if (std::find(removedGlyphs.begin(), removedGlyphs.end(), glyphID) == removedGlyphs.end()) {
-            auto it = strike.glyphImages.find(glyphID);
-            if (it != strike.glyphImages.end()) {
-                imageSize = std::max(imageSize, static_cast<uint8_t>(it->second.width));
-                bearingX = it->second.bearingX;
-                bearingY = it->second.bearingY;
-                advance = it->second.advance;
-                break;
-            }
-        }
-    }
-    
-    cblcData.push_back(imageSize); // imageSize
-    cblcData.push_back(0); // bigMetrics (0 for small)
-    cblcData.push_back(static_cast<uint8_t>(bearingX));
-    cblcData.push_back(static_cast<uint8_t>(bearingY));
-    cblcData.push_back(advance);
-    
-    uint32_t currentImageOffset = 0;
-    for (uint16_t glyphID = firstGlyph; glyphID <= lastGlyph; ++glyphID) {
-        if (std::find(removedGlyphs.begin(), removedGlyphs.end(), glyphID) != removedGlyphs.end()) {
-            appendUInt32(cblcData, 0); // удаленный глиф
-        } else {
-            auto it = strike.glyphImages.find(glyphID);
-            if (it != strike.glyphImages.end() && !it->second.data.empty()) {
-                appendUInt32(cblcData, currentImageOffset);
-                currentImageOffset += it->second.data.size();
-            } else {
-                appendUInt32(cblcData, 0); // глиф без изображения
-            }
-        }
-    }
-    
-    setUInt32(cblcData, imageDataOffsetPos, cblcData.size() - subtableStart + 4);
-}
-
-void CBDT_CBLC_Rebuilder::rebuildCBDTTable(std::vector<uint8_t>& cbdtData) {
-    appendUInt32(cbdtData, 0x00020000); // version
-    
-    // Собираем все изображения глифов
-    for (const auto& strikePair : strikes) {
-        const auto& strike = strikePair.second;
-        for (uint16_t glyphID : strike.glyphIDs) {
-            if (std::find(removedGlyphs.begin(), removedGlyphs.end(), glyphID) == removedGlyphs.end()) {
-                auto it = strike.glyphImages.find(glyphID);
-                if (it != strike.glyphImages.end() && !it->second.data.empty()) {
-                    // Добавляем данные изображения
-                    cbdtData.insert(cbdtData.end(), 
-                                  it->second.data.begin(), 
-                                  it->second.data.end());
-                }
-            }
-        }
-    }
-}
-
-std::vector<uint8_t> CBDT_CBLC_Rebuilder::createUpdatedFont(const std::vector<uint8_t>& newCBLCTable, 
-                                                          const std::vector<uint8_t>& newCBDTTable) {
-    std::vector<uint8_t> newFont = fontData;
-    
-    // Временная реализация - просто возвращаем исходные данные
-    // В реальной реализации нужно:
-    // 1. Найти CBLC и CBDT таблицы в шрифте
-    // 2. Заменить их содержимое на newCBLCTable и newCBDTTable
-    // 3. Обновить offsets и checksums в заголовке шрифта
-    
-    std::cout << "CBDT/CBLC Rebuilder: Created new CBLC table (" << newCBLCTable.size() << " bytes), "
-              << "CBDT table (" << newCBDTTable.size() << " bytes)" << std::endl;
-    
-    return newFont;
-}
-
-void CBDT_CBLC_Rebuilder::appendUInt32(std::vector<uint8_t>& data, uint32_t value) {
+static inline void appendUInt32(std::vector<uint8_t>& data, uint32_t value) {
     data.push_back((value >> 24) & 0xFF);
     data.push_back((value >> 16) & 0xFF);
     data.push_back((value >> 8) & 0xFF);
     data.push_back(value & 0xFF);
 }
 
-void CBDT_CBLC_Rebuilder::appendUInt16(std::vector<uint8_t>& data, uint16_t value) {
+static inline void appendUInt16(std::vector<uint8_t>& data, uint16_t value) {
     data.push_back((value >> 8) & 0xFF);
     data.push_back(value & 0xFF);
 }
 
-void CBDT_CBLC_Rebuilder::setUInt32(std::vector<uint8_t>& data, size_t offset, uint32_t value) {
+static inline void setUInt32(std::vector<uint8_t>& data, size_t offset, uint32_t value) {
     if (offset + 4 <= data.size()) {
         data[offset] = (value >> 24) & 0xFF;
         data[offset + 1] = (value >> 16) & 0xFF;
@@ -212,4 +29,192 @@ void CBDT_CBLC_Rebuilder::setUInt32(std::vector<uint8_t>& data, size_t offset, u
     }
 }
 
+static inline uint32_t calcTableChecksum(const std::vector<uint8_t>& data) {
+    uint32_t sum = 0;
+    for (size_t i = 0; i < data.size(); i += 4) {
+        uint32_t val = 0;
+        for (int j = 0; j < 4 && i + j < data.size(); ++j)
+            val = (val << 8) | data[i + j];
+        sum += val;
+    }
+    return sum;
+}
+
+static inline void setTag(std::vector<uint8_t>& buf, size_t offset, const std::string& tag) {
+    for (size_t i = 0; i < 4; ++i)
+        buf[offset + i] = (i < tag.size()) ? tag[i] : ' ';
+}
+
+/* ────────────────────────────────  MAIN  ─────────────────────────────── */
+
+std::vector<uint8_t> CBDT_CBLC_Rebuilder::rebuild() {
+    std::vector<uint8_t> cblcData;
+    std::vector<uint8_t> cbdtData;
+
+    rebuildCBLCTable(cblcData);
+    rebuildCBDTTable(cbdtData);
+
+    return createUpdatedFont(cblcData, cbdtData);
+}
+
+/* ─────────────────────────────── CBLC ─────────────────────────────── */
+
+void CBDT_CBLC_Rebuilder::rebuildCBLCTable(std::vector<uint8_t>& cblc) {
+    appendUInt32(cblc, 0x00020000); // version
+    appendUInt32(cblc, static_cast<uint32_t>(strikes.size())); // numStrikes
+
+    std::vector<uint32_t> strikeOffsets(strikes.size(), 0);
+    size_t offsetStart = cblc.size();
+    cblc.resize(cblc.size() + strikes.size() * 4, 0);
+
+    size_t idx = 0;
+    for (const auto& [id, strike] : strikes) {
+        strikeOffsets[idx] = cblc.size();
+        rebuildStrike(cblc, strike);
+        ++idx;
+    }
+
+    for (size_t i = 0; i < strikeOffsets.size(); ++i)
+        setUInt32(cblc, offsetStart + i * 4, strikeOffsets[i]);
+}
+
+void CBDT_CBLC_Rebuilder::rebuildStrike(std::vector<uint8_t>& buf, const StrikeRecord& strike) {
+    appendUInt16(buf, strike.ppem);
+    appendUInt16(buf, strike.resolution);
+    appendUInt32(buf, 0); // colorRef
+    appendUInt16(buf, 72);
+    appendUInt16(buf, 72);
+
+    uint16_t firstGlyph = 0xFFFF, lastGlyph = 0;
+    for (uint16_t g : strike.glyphIDs) {
+        if (std::find(removedGlyphs.begin(), removedGlyphs.end(), g) == removedGlyphs.end()) {
+            firstGlyph = std::min(firstGlyph, g);
+            lastGlyph  = std::max(lastGlyph, g);
+        }
+    }
+    if (firstGlyph == 0xFFFF) firstGlyph = lastGlyph = 0;
+
+    appendUInt16(buf, firstGlyph);
+    appendUInt16(buf, lastGlyph);
+    appendUInt16(buf, strike.ppem);
+    appendUInt16(buf, strike.ppem);
+    buf.push_back(1); // bitDepth
+    appendUInt16(buf, 0); // flags
+
+    appendUInt32(buf, 0x00000020); // offsetArray (placeholder)
+    appendUInt32(buf, 1);          // numSubtables
+    appendUInt32(buf, 0);          // colorRef
+
+    rebuildIndexSubtable1(buf, strike, firstGlyph, lastGlyph);
+}
+
+void CBDT_CBLC_Rebuilder::rebuildIndexSubtable1(
+    std::vector<uint8_t>& buf, const StrikeRecord& strike,
+    uint16_t firstGlyph, uint16_t lastGlyph
+) {
+    appendUInt16(buf, firstGlyph);
+    appendUInt16(buf, lastGlyph);
+    appendUInt16(buf, 1);   // indexFormat
+    appendUInt16(buf, 17);  // imageFormat = PNG(small metrics)
+    appendUInt32(buf, 0);   // imageDataOffsetArray offset placeholder
+
+    uint32_t imgDataOffset = 0;
+    size_t offsetArrayPos = buf.size();
+    for (uint16_t g = firstGlyph; g <= lastGlyph; ++g) {
+        if (std::find(removedGlyphs.begin(), removedGlyphs.end(), g) != removedGlyphs.end()) {
+            appendUInt32(buf, 0);
+            continue;
+        }
+        auto it = strike.glyphImages.find(g);
+        if (it != strike.glyphImages.end() && !it->second.data.empty()) {
+            appendUInt32(buf, imgDataOffset);
+            imgDataOffset += it->second.data.size();
+        } else {
+            appendUInt32(buf, 0);
+        }
+    }
+    setUInt32(buf, offsetArrayPos - 4, static_cast<uint32_t>(offsetArrayPos - offsetArrayPos + 4));
+}
+
+/* ─────────────────────────────── CBDT ─────────────────────────────── */
+
+void CBDT_CBLC_Rebuilder::rebuildCBDTTable(std::vector<uint8_t>& cbdt) {
+    appendUInt32(cbdt, 0x00020000); // version
+
+    for (const auto& [id, strike] : strikes) {
+        for (uint16_t g : strike.glyphIDs) {
+            if (std::find(removedGlyphs.begin(), removedGlyphs.end(), g) != removedGlyphs.end())
+                continue;
+            auto it = strike.glyphImages.find(g);
+            if (it != strike.glyphImages.end())
+                cbdt.insert(cbdt.end(), it->second.data.begin(), it->second.data.end());
+        }
+    }
+}
+
+/* ─────────────────────────────── FONT UPDATE ─────────────────────────────── */
+
+std::vector<uint8_t> CBDT_CBLC_Rebuilder::createUpdatedFont(
+    const std::vector<uint8_t>& newCBLCTable,
+    const std::vector<uint8_t>& newCBDTTable
+) {
+    auto tables = parseTTFTables(fontData);
+    std::vector<uint8_t> newFont;
+
+    const TTFHeader* header = reinterpret_cast<const TTFHeader*>(fontData.data());
+    uint16_t numTables = header->numTables;
+
+    appendUInt32(newFont, header->sfntVersion);
+    appendUInt16(newFont, numTables);
+    appendUInt16(newFont, header->searchRange);
+    appendUInt16(newFont, header->entrySelector);
+    appendUInt16(newFont, header->rangeShift);
+
+    size_t dirStart = newFont.size();
+    newFont.resize(dirStart + numTables * sizeof(TableRecord));
+
+    size_t currentOffset = 12 + numTables * 16;
+    for (size_t i = 0; i < tables.size(); ++i) {
+        const TableRecord& t = tables[i];
+        std::string tag(t.tag, t.tag + 4);
+
+        std::vector<uint8_t> data;
+        if (tag == "CBLC")
+            data = newCBLCTable;
+        else if (tag == "CBDT")
+            data = newCBDTTable;
+        else
+            data.assign(fontData.begin() + t.offset, fontData.begin() + t.offset + t.length);
+
+        while (data.size() % 4 != 0) data.push_back(0);
+        uint32_t checksum = calcTableChecksum(data);
+
+        // Write table record
+        setTag(newFont, dirStart + i * 16, tag);
+        setUInt32(newFont, dirStart + i * 16 + 4, checksum);
+        setUInt32(newFont, dirStart + i * 16 + 8, currentOffset);
+        setUInt32(newFont, dirStart + i * 16 + 12, data.size());
+
+        newFont.insert(newFont.end(), data.begin(), data.end());
+        currentOffset += data.size();
+    }
+
+    // Fix head checksum
+    const TableRecord* head = findTable(tables, "head");
+    if (head) {
+        size_t headOffset = head->offset;
+        setUInt32(newFont, headOffset + 8, 0);
+        uint32_t total = calcTableChecksum(newFont);
+        uint32_t adjust = 0xB1B0AFBA - total;
+        setUInt32(newFont, headOffset + 8, adjust);
+    }
+
+    std::cout << "[Rebuilder] Created font with "
+              << newCBLCTable.size() << " bytes (CBLC) and "
+              << newCBDTTable.size() << " bytes (CBDT)\n";
+
+    return newFont;
+}
+
 } // namespace fontmaster
+
