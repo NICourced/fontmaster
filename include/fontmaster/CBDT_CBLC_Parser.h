@@ -84,7 +84,7 @@ public:
     bool parse();
     const std::map<uint32_t, StrikeRecord>& getStrikes() const { return strikes; }
     const std::vector<uint16_t>& getRemovedGlyphs() const { return removedGlyphs; }
-    
+    const std::vector<uint8_t>& getFontData() const { return fontData; }
 private:
     std::vector<uint8_t> fontData;
     std::map<uint32_t, StrikeRecord> strikes;

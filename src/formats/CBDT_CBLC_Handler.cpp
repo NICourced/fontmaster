@@ -1,6 +1,6 @@
 #include "fontmaster/CBDT_CBLC_Handler.h"
 #include "fontmaster/CBDT_CBLC_Font.h"
-#include "fontmaster/FontMasterImpl.h"
+#include "fontmaster/FontMaster.h"
 #include "fontmaster/TTFUtils.h"
 #include <iostream>
 #include <fstream>
@@ -25,6 +25,32 @@ bool CBDT_CBLC_Handler::canHandle(const std::vector<uint8_t>& data) const {
     
     return hasCBDT && hasCBLC;
 }
+
+
+
+bool canHandle(const std::string& filepath) {
+    try {
+        std::ifstream file(filepath, std::ios::binary);
+        if (!file) return false;
+
+        file.seekg(0, std::ios::end);
+        size_t size = file.tellg();
+        file.seekg(0, std::ios::beg);
+            
+        if (size < 1024) return false;
+            
+        std::vector<uint8_t> header(1024);
+        file.read(reinterpret_cast<char*>(header.data()), header.size());
+            
+        auto tables = utils::parseTTFTables(header);
+        return utils::hasTable(tables, "COLR") && utils::hasTable(tables, "CPAL");
+    } catch (...) {
+        return false;
+    }
+}
+ 
+
+
 
 std::unique_ptr<Font> CBDT_CBLC_Handler::loadFont(const std::string& filepath) {
     std::ifstream file(filepath, std::ios::binary);

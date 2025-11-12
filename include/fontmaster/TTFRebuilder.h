@@ -59,7 +59,7 @@ public:
     bool hasTable(const std::string& tag) const;
     void setTableRebuildHandler(const std::string& tag, std::function<void(const std::string&)> handler);
     
-    std::vector<uint8_t> rebuild();
+    virtual std::vector<uint8_t> rebuild() = 0;
     
     void setNumGlyphs(uint16_t newNumGlyphs);
     void setNumberOfHMetrics(uint16_t newNumHMetrics);
