@@ -5,6 +5,7 @@
 #include <memory>
 #include <fstream>
 #include <map>
+#include <iostream>
 
 namespace fontmaster {
 

@@ -93,5 +93,6 @@ std::vector<TableRecord> parseTTFTables(const std::vector<uint8_t>& fontData);
 bool hasTable(const std::vector<TableRecord>& tables, const std::string& tableTag);
 const TableRecord* findTable(const std::vector<TableRecord>& tables, const std::string& tableTag);
 
+
 }
 }

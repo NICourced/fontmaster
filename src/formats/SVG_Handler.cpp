@@ -1,5 +1,9 @@
 #include "fontmaster/FontMaster.h"
 #include "fontmaster/TTFUtils.h"
+#include <fstream>
+#include <map>
+#include <iostream>
+
 
 namespace fontmaster {
 
@@ -26,7 +30,7 @@ public:
         }
     }
     
-    std::unique_ptr<Font> loadFont(const std::string& filepath) override {
+    std::unique_ptr<SVG_Font> loadFont(const std::string& filepath) override {
         return std::make_unique<SVG_Font>(filepath);
     }
     
@@ -164,9 +168,7 @@ public:
 };
 
 static bool registerSVGHandler() {
-    FontMasterImpl::instance().registerHandler(
-        std::make_unique<SVG_Handler>()
-    );
+        std::make_unique<SVG_Handler>();
     return true;
 }
 

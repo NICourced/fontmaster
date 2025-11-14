@@ -2,23 +2,24 @@
 #define CBDT_CBLC_HANDLER_H
 
 #include "fontmaster/FontMaster.h"
-#include "fontmaster/CBDT_CBLC_Parser.h"
-#include "fontmaster/CBDT_CBLC_Rebuilder.h"
 #include <memory>
 #include <vector>
 
 namespace fontmaster {
 
-class CBDT_CBLC_Handler : FontFormatHandler {
+class CBDT_CBLC_Handler : public FontFormatHandler { // Исправлено: добавлен public
 public:
-    CBDT_CBLC_Handler();
+    CBDT_CBLC_Handler() = default;
     virtual ~CBDT_CBLC_Handler() = default;
     
-    bool canHandle(const std::string& filepath) override; 
-    bool canHandle(const std::vector<unsigned char>& filePath) const;
+    bool canHandle(const std::string& filepath) override;
     
-    std::unique_ptr<Font> loadFont(const std::string& filepath);
+    std::unique_ptr<Font> loadFont(const std::string& filepath) override;
     
+    FontFormat getFormat() const override { 
+        return FontFormat::CBDT_CBLC; 
+    }
+
 private:
     std::vector<std::string> supportedFormats;
 };

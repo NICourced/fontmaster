@@ -7,28 +7,7 @@
 
 namespace fontmaster {
 
-CBDT_CBLC_Handler::CBDT_CBLC_Handler() {
-    supportedFormats = {"CBDT", "CBLC"};
-}
-
-bool CBDT_CBLC_Handler::canHandle(const std::vector<uint8_t>& data) const {
-    auto tables = utils::parseTTFTables(data);
-    
-    bool hasCBDT = false;
-    bool hasCBLC = false;
-    
-    for (const auto& table : tables) {
-        std::string tag(table.tag, 4);
-        if (tag == "CBDT") hasCBDT = true;
-        if (tag == "CBLC") hasCBLC = true;
-    }
-    
-    return hasCBDT && hasCBLC;
-}
-
-
-
-bool canHandle(const std::string& filepath) {
+bool CBDT_CBLC_Handler::canHandle(const std::string& filepath) {
     try {
         std::ifstream file(filepath, std::ios::binary);
         if (!file) return false;
@@ -43,14 +22,14 @@ bool canHandle(const std::string& filepath) {
         file.read(reinterpret_cast<char*>(header.data()), header.size());
             
         auto tables = utils::parseTTFTables(header);
-        return utils::hasTable(tables, "COLR") && utils::hasTable(tables, "CPAL");
+        bool hasCBDT = utils::hasTable(tables, "CBDT");
+        bool hasCBLC = utils::hasTable(tables, "CBLC");
+        
+        return hasCBDT && hasCBLC;
     } catch (...) {
         return false;
     }
 }
- 
-
-
 
 std::unique_ptr<Font> CBDT_CBLC_Handler::loadFont(const std::string& filepath) {
     std::ifstream file(filepath, std::ios::binary);
@@ -71,7 +50,7 @@ std::unique_ptr<Font> CBDT_CBLC_Handler::loadFont(const std::string& filepath) {
         return nullptr;
     }
     
-    if (!canHandle(data)) {
+    if (!canHandle(filepath)) {
         std::cerr << "CBDT/CBLC: Cannot handle this font format" << std::endl;
         return nullptr;
     }

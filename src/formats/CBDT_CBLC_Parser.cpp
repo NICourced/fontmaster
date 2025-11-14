@@ -83,7 +83,7 @@ bool CBDT_CBLC_Parser::parseCBLCTable(uint32_t offset, uint32_t length) {
     return true;
 }
 
-bool CBDT_CBLC_Parser::parseStrike(uint32_t offset, uint32_t strikeIndex) {
+bool CBDT_CBLC_Parser::parseStrike(uint32_t offset, uint16_t strikeIndex) {
     if (offset + 32 > fontData.size()) return false;
     const uint8_t* data = fontData.data() + offset;
 

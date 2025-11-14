@@ -18,7 +18,6 @@ include_directories(include)
 # Core library sources
 set(CORE_SOURCES
     src/core/FontMaster.cpp
-    src/core/FontRegistry.cpp
 )
 
 # Utils sources
@@ -38,7 +37,7 @@ set(FORMATS_SOURCES
     src/formats/CBDT_CBLC_Handler.cpp
     src/formats/CBDT_CBLC_Parser.cpp
     src/formats/CBDT_CBLC_Rebuilder.cpp
-    src/formats/CBDT_CBLC_Registration.cpp
+    #    src/formats/CBDT_CBLC_Registration.cpp
     src/formats/COLR_CPAL_Handler.cpp
     src/formats/SBIX_Handler.cpp
     src/formats/SVG_Handler.cpp

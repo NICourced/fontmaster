@@ -1,4 +1,5 @@
 #pragma once
+#include "fontmaster/CBDT_CBLC_Types.h"
 #include <cstdint>
 #include <vector>
 #include <unordered_map>
@@ -8,34 +9,16 @@
 namespace fontmaster {
 
 /**
- * @brief Описание одного изображения глифа в CBDT.
- */
-struct GlyphImage {
-    std::vector<uint8_t> data;  ///< Сырые бинарные данные изображения (PNG, JPEG и т.д.)
-    uint16_t width = 0;         ///< Ширина изображения (если доступно)
-    uint16_t height = 0;        ///< Высота изображения (если доступно)
-};
-
-/**
- * @brief Описание страйка (strike) — набора цветных глифов для определённого размера.
- */
-struct StrikeRecord {
-    uint16_t ppem = 0;                 ///< Размер пикселей на EM
-    uint16_t resolution = 72;          ///< DPI
-    std::vector<uint16_t> glyphIDs;    ///< Список глифов в страйке
-    std::unordered_map<uint16_t, GlyphImage> glyphImages; ///< Данные по каждому глифу
-};
-
-/**
  * @brief Класс для пересборки цветных таблиц CBDT/CBLC шрифта.
  * Используется после парсера для восстановления шрифта с модифицированными глифами.
  */
 class CBDT_CBLC_Rebuilder {
 public:
     /// Конструктор принимает исходные бинарные данные шрифта
-    explicit CBDT_CBLC_Rebuilder(const std::vector<uint8_t>& fontData)
-        : fontData(fontData) {}
-
+    explicit CBDT_CBLC_Rebuilder(const std::vector<uint8_t>& fontData, 
+                       const std::map<uint16_t, StrikeRecord>& strikes, 
+                       const std::vector<uint16_t>& removedGlyphs)
+        : fontData(fontData), strikes(strikes), removedGlyphs(removedGlyphs) {}
     /**
      * @brief Добавить страйк (набор глифов)
      */
@@ -58,7 +41,7 @@ public:
 
 private:
     const std::vector<uint8_t>& fontData;
-    std::unordered_map<uint16_t, StrikeRecord> strikes;
+    std::map<uint16_t, StrikeRecord> strikes;
     std::vector<uint16_t> removedGlyphs;
 
     void rebuildCBLCTable(std::vector<uint8_t>& cblc);
