@@ -83,6 +83,7 @@ extern void registerNotoBreezeAdwaitaNerdHandler();
 static void registerAllHandlers() {
     // Регистрируем обработчики
     registerCBDTHandler();
+    registerSBIXHandler();
 }
 
 std::unique_ptr<Font> Font::load(const std::string& filepath) {
