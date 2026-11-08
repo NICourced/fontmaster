@@ -47,7 +47,9 @@ set(FORMATS_SOURCES
     src/formats/COLR_CPAL_Handler.cpp
     src/formats/COLR_CPAL_Registration.cpp
     src/formats/SBIX_Handler.cpp
+    src/formats/SVG_Handler.cpp
     src/formats/SVGTable.cpp
+    src/formats/SVGOverlayFont.cpp
     src/formats/StandardFont.cpp
 )
 

@@ -1,6 +1,7 @@
 #include "fontmaster/FontMaster.h"
 #include "fontmaster/TTFUtils.h"
 #include "formats/StandardFont.h"
+#include "formats/SVGOverlayFont.h"
 #include <unordered_map>
 #include <vector>
 #include <memory>
@@ -45,7 +46,7 @@ public:
             try {
                 auto font = handler->loadFont(filepath);
                 if (!font) throw std::runtime_error("Format handler failed to parse font");
-                return font;
+                return detail::withSVGPresentations(std::move(font));
             } catch (const std::exception& error) {
                 throw FontLoadException(filepath, error.what());
             }
@@ -85,6 +86,7 @@ static void registerAllHandlers() {
     registerCBDTHandler();
     registerSBIXHandler();
     registerCOLRHandler();
+    registerSVGHandler();
 }
 
 std::unique_ptr<Font> Font::load(const std::string& filepath) {
