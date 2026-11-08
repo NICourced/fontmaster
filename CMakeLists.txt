@@ -92,3 +92,27 @@ add_executable(fontmaster_cli
 )
 
 target_link_libraries(fontmaster_cli fontmaster)
+
+# Qt GUI executable (optional - requires Qt)
+find_package(Qt5 COMPONENTS Core Widgets QUIET)
+if(Qt5_FOUND)
+    qt5_wrap_cpp(QT_HEADERS
+        src/qt/MainWindow.h
+    )
+
+    add_executable(fontmaster_qt
+        src/qt/main.cpp
+        src/qt/MainWindow.cpp
+        ${QT_HEADERS}
+    )
+
+    target_link_libraries(fontmaster_qt fontmaster Qt5::Core Qt5::Widgets)
+
+    # Set Qt specific properties
+    set_target_properties(fontmaster_qt PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+    )
+else()
+    message(WARNING "Qt5 not found - skipping fontmaster_qt target")
+endif()
