@@ -116,3 +116,65 @@ if(Qt5_FOUND)
 else()
     message(WARNING "Qt5 not found - skipping fontmaster_qt target")
 endif()
+
+# Tests use explicit fixture paths and also work with out-of-tree builds.
+include(CTest)
+set(FONTMASTER_TEST_FONT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fonts" CACHE PATH "Font test fixtures")
+if(BUILD_TESTING)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cbdt_cblc.cpp")
+        add_executable(fontmaster_tests_cbdt tests/test_cbdt_cblc.cpp)
+        target_link_libraries(fontmaster_tests_cbdt fontmaster)
+        if(EXISTS "${FONTMASTER_TEST_FONT_DIR}/NotoColorEmoji.ttf")
+            add_test(NAME CBDT_CBLCTests COMMAND fontmaster_tests_cbdt
+                "${FONTMASTER_TEST_FONT_DIR}/NotoColorEmoji.ttf")
+        endif()
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_noto_emojis.cpp")
+        add_executable(fontmaster_tests_noto tests/test_noto_emojis.cpp)
+        target_link_libraries(fontmaster_tests_noto fontmaster)
+    endif()
+    add_executable(fontmaster_binary_tests tests/test_binary_fonts.cpp)
+    target_link_libraries(fontmaster_binary_tests fontmaster)
+    foreach(component rendering svg sbix colr_images standard mixed_fonts)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_${component}.cpp")
+            add_executable(fontmaster_test_${component} "tests/test_${component}.cpp")
+            target_include_directories(fontmaster_test_${component} PRIVATE src)
+            target_link_libraries(fontmaster_test_${component} fontmaster PkgConfig::FONTMASTER_RENDER)
+            if(component STREQUAL "sbix" OR component STREQUAL "standard" OR
+               EXISTS "${FONTMASTER_TEST_FONT_DIR}/NotoColorEmoji.ttf")
+                add_test(NAME ColorFonts_${component} COMMAND fontmaster_test_${component}
+                    "${FONTMASTER_TEST_FONT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+            endif()
+        endif()
+    endforeach()
+    if(EXISTS "${FONTMASTER_TEST_FONT_DIR}/NotoColorEmoji.ttf")
+        foreach(mode load edit colr-edit composites metadata malformed)
+            add_test(NAME BinaryFonts_${mode} COMMAND fontmaster_binary_tests "${mode}"
+                "${FONTMASTER_TEST_FONT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+        endforeach()
+        # Independent file validation is available when FontTools is installed.
+        find_program(FONTMASTER_PYTHON_EXECUTABLE NAMES python3)
+        if(FONTMASTER_PYTHON_EXECUTABLE)
+            execute_process(COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}" -c "import fontTools"
+                RESULT_VARIABLE FONTMASTER_HAS_FONTTOOLS OUTPUT_QUIET ERROR_QUIET)
+            if(FONTMASTER_HAS_FONTTOOLS EQUAL 0)
+                add_test(NAME BinaryFonts_fonttools COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_binary_fonts.py"
+                    "$<TARGET_FILE:fontmaster_cli>" "${FONTMASTER_TEST_FONT_DIR}"
+                    "${CMAKE_CURRENT_BINARY_DIR}")
+                set_tests_properties(BinaryFonts_fonttools PROPERTIES
+                    DEPENDS "BinaryFonts_edit;BinaryFonts_colr-edit")
+                add_test(NAME ColorFonts_fonttools COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_color_fonts.py"
+                    "$<TARGET_FILE:fontmaster_cli>" "${FONTMASTER_TEST_FONT_DIR}"
+                    "${CMAKE_CURRENT_BINARY_DIR}")
+                set_tests_properties(ColorFonts_fonttools PROPERTIES
+                    DEPENDS "ColorFonts_svg;ColorFonts_sbix;ColorFonts_colr_images;ColorFonts_standard;ColorFonts_mixed_fonts")
+            endif()
+        endif()
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_all_fonts.cpp")
+        add_executable(test_all_fonts test_all_fonts.cpp)
+        target_link_libraries(test_all_fonts fontmaster)
+    endif()
+endif()
