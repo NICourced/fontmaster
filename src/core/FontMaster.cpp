@@ -1,5 +1,6 @@
 #include "fontmaster/FontMaster.h"
 #include "fontmaster/TTFUtils.h"
+#include "fontmaster/Noto_Breeze_Adwaita_Nerd_Handler.h"
 #include "formats/StandardFont.h"
 #include "formats/SVGOverlayFont.h"
 #include <unordered_map>
@@ -87,6 +88,7 @@ static void registerAllHandlers() {
     registerSBIXHandler();
     registerCOLRHandler();
     registerSVGHandler();
+    registerNotoBreezeAdwaitaNerdHandler();
 }
 
 std::unique_ptr<Font> Font::load(const std::string& filepath) {

@@ -51,6 +51,9 @@ set(FORMATS_SOURCES
     src/formats/SVGTable.cpp
     src/formats/SVGOverlayFont.cpp
     src/formats/StandardFont.cpp
+    src/formats/Noto_Breeze_Adwaita_Nerd_Handler.cpp
+    src/formats/Noto_Breeze_Adwaita_Nerd_Font.cpp
+    src/formats/Noto_Breeze_Adwaita_Nerd_Registration.cpp
 )
 
 # Combine all sources
