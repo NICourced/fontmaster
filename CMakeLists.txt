@@ -39,6 +39,11 @@ set(UTILS_SOURCES
 
 # Format handlers sources
 set(FORMATS_SOURCES
+    src/formats/CBDT_CBLC_Font.cpp
+    src/formats/CBDT_CBLC_Handler.cpp
+    src/formats/CBDT_CBLC_Parser.cpp
+    src/formats/CBDT_CBLC_Rebuilder.cpp
+    src/formats/CBDT_CBLC_Registration.cpp
     src/formats/SVGTable.cpp
     src/formats/StandardFont.cpp
 )
