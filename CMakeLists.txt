@@ -23,6 +23,7 @@ include_directories(include)
 # Core library sources
 set(CORE_SOURCES
     src/core/FontMaster.cpp
+    src/core/EmojiRenderer.cpp
 )
 
 # Utils sources
