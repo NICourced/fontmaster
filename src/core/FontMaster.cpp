@@ -84,6 +84,7 @@ static void registerAllHandlers() {
     // Регистрируем обработчики
     registerCBDTHandler();
     registerSBIXHandler();
+    registerCOLRHandler();
 }
 
 std::unique_ptr<Font> Font::load(const std::string& filepath) {
