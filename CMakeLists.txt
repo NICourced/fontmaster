@@ -178,3 +178,62 @@ if(BUILD_TESTING)
         target_link_libraries(test_all_fonts fontmaster)
     endif()
 endif()
+
+# Installation supports system and user prefixes, --prefix and DESTDIR staging.
+install(TARGETS fontmaster EXPORT fontmaster-targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+set(fontmaster_app_targets fontmaster_cli)
+if(TARGET fontmaster_qt)
+    list(APPEND fontmaster_app_targets fontmaster_qt)
+endif()
+
+# Find the installed library without ldconfig or LD_LIBRARY_PATH, including
+# after moving an installation or overriding its prefix at install time.
+if(UNIX)
+    if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
+        set(fontmaster_install_rpath "${CMAKE_INSTALL_LIBDIR}")
+    else()
+        file(RELATIVE_PATH fontmaster_bin_to_lib
+            "${CMAKE_INSTALL_FULL_BINDIR}" "${CMAKE_INSTALL_FULL_LIBDIR}")
+        if(APPLE)
+            set(fontmaster_install_rpath "@loader_path/${fontmaster_bin_to_lib}")
+        else()
+            set(fontmaster_install_rpath "$ORIGIN/${fontmaster_bin_to_lib}")
+        endif()
+    endif()
+    set_property(TARGET ${fontmaster_app_targets} APPEND PROPERTY
+        INSTALL_RPATH "${fontmaster_install_rpath}")
+endif()
+
+install(TARGETS ${fontmaster_app_targets}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY include/fontmaster DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h"
+)
+
+set(fontmaster_cmake_dir "${CMAKE_INSTALL_LIBDIR}/cmake/fontmaster")
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fontmaster-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake"
+    INSTALL_DESTINATION "${fontmaster_cmake_dir}"
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-config-version.cmake"
+    DESTINATION "${fontmaster_cmake_dir}"
+)
+install(EXPORT fontmaster-targets
+    FILE fontmaster-targets.cmake
+    NAMESPACE fontmaster::
+    DESTINATION "${fontmaster_cmake_dir}"
+)
