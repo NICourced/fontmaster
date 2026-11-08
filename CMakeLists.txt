@@ -85,3 +85,10 @@ set_target_properties(fontmaster PROPERTIES
     SOVERSION 1
     OUTPUT_NAME "fontmaster"
 )
+
+# CLI executable
+add_executable(fontmaster_cli
+    src/cli/main.cpp
+)
+
+target_link_libraries(fontmaster_cli fontmaster)
