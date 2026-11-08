@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
-project(fontmaster VERSION 1.0.0 LANGUAGES CXX)
+project(fontmaster VERSION 0.0.1 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FONTMASTER_RENDER REQUIRED IMPORTED_TARGET
-    harfbuzz>=13 harfbuzz-raster>=13 harfbuzz-subset>=11.1 libpng cairo librsvg-2.0>=2.46 libturbojpeg>=3.0 libtiff-4>=4.5 libxml-2.0 zlib)
+    harfbuzz>=15.1 harfbuzz-raster>=15.1 harfbuzz-subset>=11.1 libpng cairo librsvg-2.0>=2.46 libturbojpeg>=3.0 libtiff-4>=4.5 libxml-2.0 zlib)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -82,7 +82,7 @@ target_include_directories(fontmaster
 # Set library properties
 set_target_properties(fontmaster PROPERTIES
     VERSION ${PROJECT_VERSION}
-    SOVERSION 1
+    SOVERSION ${PROJECT_VERSION_MAJOR}
     OUTPUT_NAME "fontmaster"
 )
 
@@ -107,6 +107,7 @@ if(Qt5_FOUND)
     )
 
     target_link_libraries(fontmaster_qt fontmaster Qt5::Core Qt5::Widgets)
+    target_compile_definitions(fontmaster_qt PRIVATE FONTMASTER_VERSION="${PROJECT_VERSION}")
 
     # Set Qt specific properties
     set_target_properties(fontmaster_qt PROPERTIES
@@ -116,6 +117,8 @@ if(Qt5_FOUND)
 else()
     message(WARNING "Qt5 not found - skipping fontmaster_qt target")
 endif()
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-version.txt" "${PROJECT_VERSION}\n")
 
 # Tests use explicit fixture paths and also work with out-of-tree builds.
 include(CTest)

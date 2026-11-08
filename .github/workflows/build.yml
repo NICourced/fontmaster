@@ -1,0 +1,123 @@
+name: Build and release
+
+on:
+  push:
+    branches: [master]
+    tags: ['[0-9]*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config meson curl nasm patchelf \
+            libpng-dev libcairo2-dev librsvg2-dev libtiff-dev libxml2-dev zlib1g-dev \
+            libfreetype-dev libglib2.0-dev qtbase5-dev qtbase5-dev-tools \
+            libgl1-mesa-dev libxkbcommon-x11-0 libxcb-xinerama0 libxcb-cursor0 \
+            python3-fonttools desktop-file-utils file
+
+      - name: Cache rendering dependencies
+        id: dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/fontmaster-deps
+          key: ubuntu-24.04-x86_64-${{ hashFiles('ci/build-dependencies.sh') }}
+
+      - name: Build pinned rendering dependencies
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        run: bash ci/build-dependencies.sh "$RUNNER_TEMP/fontmaster-deps" "$RUNNER_TEMP/dependency-build"
+
+      - name: Configure dependency paths
+        run: |
+          echo "PKG_CONFIG_PATH=$RUNNER_TEMP/fontmaster-deps/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$RUNNER_TEMP/fontmaster-deps/lib" >> "$GITHUB_ENV"
+
+      - name: Download external test fonts
+        run: bash ci/fetch-test-fonts.sh "$RUNNER_TEMP/test-fonts"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
+            -DFONTMASTER_TEST_FONT_DIR="$RUNNER_TEMP/test-fonts"
+          version=$(cat build/fontmaster-version.txt)
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "$version" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match CMake version $version" >&2
+            exit 1
+          fi
+
+      - name: Build and test
+        run: |
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      - name: Build release binaries
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build build
+          desktop-file-validate packaging/fontmaster.desktop
+          bash ci/package-linux.sh build dist "$RUNNER_TEMP/fontmaster-deps" "$RUNNER_TEMP/test-fonts"
+
+      - name: Verify portable CLI in a clean runtime
+        run: |
+          docker run --rm --network none \
+            --volume "$PWD/dist:/packages:ro" \
+            --volume "$RUNNER_TEMP/test-fonts:/fonts:ro" \
+            --volume "$PWD/ci/check-portable.sh:/check-portable.sh:ro" \
+            ubuntu:24.04 bash /check-portable.sh /packages /fonts
+
+      - name: Upload downloadable packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fontmaster-linux-x86_64
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    name: Publish release
+    if: github.ref_type == 'tag'
+    needs: linux
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: fontmaster-linux-x86_64
+          path: dist
+
+      - name: Publish tagged binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          sha256sum --check SHA256SUMS
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" ./* --clobber
+          else
+            gh release create "$RELEASE_TAG" ./* --verify-tag --draft \
+              --title "FontMaster $RELEASE_TAG" --generate-notes \
+              --notes "Linux x86_64 binaries built on Ubuntu 24.04 (glibc 2.39+). AppImage: desktop app. Portable archive: desktop app and CLI. Application libraries are bundled; host graphics drivers are required. Test fonts are excluded. Verify downloads using SHA256SUMS."
+          fi
+          gh release edit "$RELEASE_TAG" --draft=false --latest

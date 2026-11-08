@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=FontMaster
+Comment=Inspect, render and edit OpenType fonts
+Exec=fontmaster_qt
+Icon=fontmaster
+Terminal=false
+Categories=Graphics;

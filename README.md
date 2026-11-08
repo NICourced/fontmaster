@@ -4,7 +4,17 @@ Inspect, render and edit compiled OpenType fonts from C++ or the command line, w
 
 FontMaster works directly with binary `.ttf` and `.otf` files, including color emoji fonts. Use it to explore glyphs, export PNG previews, replace glyph artwork and save modified fonts.
 
-[Features](#features) · [Build](#build) · [Install](#install) · [Command line](#command-line) · [Desktop app](#desktop-app) · [C++ API](#c-api)
+[Download](#download) · [Features](#features) · [Build](#build) · [Install](#install) · [Command line](#command-line) · [Desktop app](#desktop-app) · [C++ API](#c-api)
+
+## Download
+
+Download Linux x86_64 binaries from [GitHub Releases](https://github.com/NICourced/fontmaster/releases/latest). Packages are built on Ubuntu 24.04 and require glibc 2.39 or newer.
+
+- **AppImage:** the Qt desktop app with bundled application dependencies. Make it executable with `chmod +x FontMaster-*.AppImage` and run it. If FUSE is unavailable, run it with `--appimage-extract-and-run`.
+- **Portable archive:** the Qt app, CLI and bundled libraries. Extract the `.tar.gz`, launch `FontMaster.AppDir/AppRun` for the desktop app, or run `FontMaster.AppDir/usr/bin/fontmaster_cli --help` for the CLI.
+- **SHA256SUMS:** verify downloads with `sha256sum --check SHA256SUMS` from the directory containing both release files.
+
+The packages use the host's graphics drivers and desktop services. Test fonts are excluded. GitHub Actions builds and tests pushes and pull requests; pushing a version tag matching the CMake version publishes the packages to a release after the build succeeds.
 
 ## Features
 
@@ -34,8 +44,8 @@ You need a C++17 compiler, CMake and `pkg-config`, plus the following developmen
 
 | Dependency | Minimum version / pkg-config module |
 | --- | --- |
-| HarfBuzz | 13 / `harfbuzz` |
-| HarfBuzz Raster | 13 / `harfbuzz-raster` |
+| HarfBuzz | 15.1 / `harfbuzz` |
+| HarfBuzz Raster | 15.1 / `harfbuzz-raster` |
 | HarfBuzz Subset | 11.1 / `harfbuzz-subset` |
 | Cairo | `cairo` |
 | librsvg | 2.46 / `librsvg-2.0` |
@@ -199,7 +209,7 @@ int main(int argc, char** argv) {
 To use an installed FontMaster library, save the example as `example.cpp` and add the following to your CMake project:
 
 ```cmake
-find_package(fontmaster 1 CONFIG REQUIRED)
+find_package(fontmaster 0.0.1 CONFIG REQUIRED)
 add_executable(example example.cpp)
 target_link_libraries(example PRIVATE fontmaster::fontmaster)
 ```
