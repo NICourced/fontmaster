@@ -2,7 +2,7 @@
 
 #include <QMainWindow>
 #include <QTreeWidget>
-#include <QListWidget>
+#include <QScrollArea>
 #include <QPushButton>
 #include <QLabel>
 #include <QMenuBar>
@@ -29,13 +29,18 @@ private slots:
     void updateGlyphPreview();
 
 private:
+    friend struct MainWindowTest;
+
+    enum class Status { Neutral, Success, Error };
     void setupUI();
     void loadFont(const QString& filepath);
     void refreshGlyphList();
     void clearFont();
+    void setStatus(const QString& message, Status status = Status::Neutral);
 
     QTreeWidget *glyphTree;
-    QListWidget *glyphPreview;
+    QLabel *previewTextLabel;
+    QLabel *previewImageLabel;
     QPushButton *btnOpen;
     QPushButton *btnSave;
     QPushButton *btnRemove;

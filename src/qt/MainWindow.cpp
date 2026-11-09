@@ -6,7 +6,6 @@
 #include <QImage>
 #include <QIcon>
 #include <QLabel>
-#include <QListWidgetItem>
 #include <QPainter>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -14,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     setWindowTitle("FontMaster - Emoji Font Editor");
     setMinimumSize(1000, 700);
 
-    statusLabel->setText("Ready - No font loaded");
+    setStatus("Ready - No font loaded");
 }
 
 void MainWindow::setupUI() {
@@ -30,7 +29,7 @@ void MainWindow::setupUI() {
     // Информация о шрифте
     fontInfoLabel = new QLabel("No font loaded", this);
     fontInfoLabel->setWordWrap(true);
-    fontInfoLabel->setStyleSheet("QLabel { background-color: #f0f0f0; padding: 5px; border: 1px solid #ccc; }");
+    fontInfoLabel->setStyleSheet("QLabel { background-color: #f0f0f0; color: #1f2937; padding: 5px; border: 1px solid #ccc; }");
     leftLayout->addWidget(fontInfoLabel);
 
     // Панель управления
@@ -65,12 +64,28 @@ void MainWindow::setupUI() {
     previewLabel->setAlignment(Qt::AlignCenter);
     rightLayout->addWidget(previewLabel);
 
-    glyphPreview = new QListWidget(this);
+    auto* glyphPreview = new QScrollArea(this);
+    glyphPreview->setWidgetResizable(true);
+    auto* previewContent = new QWidget();
+    auto* previewLayout = new QVBoxLayout(previewContent);
+    previewLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+    previewTextLabel = new QLabel("Select a glyph to preview", previewContent);
+    previewTextLabel->setTextFormat(Qt::PlainText);
+    previewTextLabel->setWordWrap(true);
+    previewLayout->addWidget(previewTextLabel);
+    previewImageLabel = new QLabel(previewContent);
+    previewImageLabel->setFixedSize(256, 256);
+    previewImageLabel->setAlignment(Qt::AlignCenter);
+    previewImageLabel->hide();
+    previewLayout->addWidget(previewImageLabel, 0, Qt::AlignHCenter);
+    previewLayout->addStretch();
+    glyphPreview->setWidget(previewContent);
     rightLayout->addWidget(glyphPreview, 1);
 
     statusLabel = new QLabel(this);
+    statusLabel->setTextFormat(Qt::PlainText);
+    statusLabel->setWordWrap(true);
     statusLabel->setAlignment(Qt::AlignCenter);
-    statusLabel->setStyleSheet("QLabel { background-color: #e0e0e0; padding: 3px; }");
     rightLayout->addWidget(statusLabel);
 
     mainLayout->addWidget(leftPanel, 2);
@@ -92,6 +107,22 @@ void MainWindow::setupUI() {
             this, &MainWindow::glyphSelectionChanged);
 }
 
+void MainWindow::setStatus(const QString& message, Status status) {
+    const char* background = "#e0e0e0";
+    const char* foreground = "#1f2937";
+    if (status == Status::Success) {
+        background = "#166534";
+        foreground = "#ffffff";
+    } else if (status == Status::Error) {
+        background = "#b91c1c";
+        foreground = "#ffffff";
+    }
+    statusLabel->setStyleSheet(
+        QString("QLabel { background-color: %1; color: %2; padding: 6px; }")
+            .arg(background).arg(foreground));
+    statusLabel->setText(message);
+}
+
 void MainWindow::openFont() {
     QString filepath = QFileDialog::getOpenFileName(this, "Open Font File",
                                                    "", "Font Files (*.ttf *.otf)");
@@ -109,12 +140,15 @@ void MainWindow::saveFont() {
     if (!filepath.isEmpty()) {
         try {
             if (currentFont->save(filepath.toStdString())) {
+                setStatus("Font saved successfully", Status::Success);
                 QMessageBox::information(this, "Success",
                     "Font saved successfully to:\n" + filepath);
             } else {
+                setStatus("Failed to save font", Status::Error);
                 QMessageBox::warning(this, "Error", "Failed to save font");
             }
         } catch (const std::exception& e) {
+            setStatus("Failed to save font: " + QString(e.what()), Status::Error);
             QMessageBox::warning(this, "Error",
                 QString("Failed to save font:\n") + e.what());
         }
@@ -150,13 +184,16 @@ void MainWindow::loadFont(const QString& filepath) {
                     .arg(glyphs.size())
             );
 
-            statusLabel->setText("Font loaded successfully");
+            setStatus("Font loaded successfully", Status::Success);
             btnSave->setEnabled(true);
 
         } else {
+            setStatus("Cannot load font: " + filepath, Status::Error);
             QMessageBox::warning(this, "Error", "Cannot load font: " + filepath);
         }
     } catch (const std::exception& e) {
+        clearFont();
+        setStatus("Cannot load font: " + QString(e.what()), Status::Error);
         QMessageBox::warning(this, "Error",
             QString("Error loading font:\n") + e.what());
     }
@@ -167,26 +204,20 @@ void MainWindow::refreshGlyphList() {
 
     if (!currentFont) return;
 
-    try {
-        auto glyphs = currentFont->listGlyphs();
-        for (const auto& glyph : glyphs) {
-            QTreeWidgetItem *item = new QTreeWidgetItem(glyphTree);
-            item->setText(0, QString::fromStdString(glyph.name));
+    auto glyphs = currentFont->listGlyphs();
+    for (const auto& glyph : glyphs) {
+        QTreeWidgetItem *item = new QTreeWidgetItem(glyphTree);
+        item->setText(0, QString::fromStdString(glyph.name));
 
-            if (glyph.unicode != 0) {
-                item->setText(1, QString("U+%1").arg(glyph.unicode, 4, 16, QChar('0')).toUpper());
-            }
-
-            item->setText(2, QString::fromStdString(glyph.format));
-            item->setText(3, QString("%1 bytes").arg(glyph.data_size));
+        if (glyph.unicode != 0) {
+            item->setText(1, QString("U+%1").arg(glyph.unicode, 4, 16, QChar('0')).toUpper());
         }
 
-        glyphTree->header()->resizeSections(QHeaderView::ResizeToContents);
-        statusLabel->setText(QString("Loaded %1 glyphs").arg(glyphs.size()));
-
-    } catch (const std::exception& e) {
-        statusLabel->setText("Error loading glyph list: " + QString(e.what()));
+        item->setText(2, QString::fromStdString(glyph.format));
+        item->setText(3, QString("%1 bytes").arg(glyph.data_size));
     }
+
+    glyphTree->header()->resizeSections(QHeaderView::ResizeToContents);
 }
 
 void MainWindow::removeSelectedGlyph() {
@@ -203,12 +234,14 @@ void MainWindow::removeSelectedGlyph() {
         try {
             if (currentFont->removeGlyph(glyphName.toStdString())) {
                 delete item;
-                statusLabel->setText("Glyph removed: " + glyphName);
+                setStatus("Glyph removed: " + glyphName, Status::Success);
                 btnSave->setEnabled(true);
             } else {
+                setStatus("Failed to remove glyph: " + glyphName, Status::Error);
                 QMessageBox::warning(this, "Error", "Failed to remove glyph");
             }
         } catch (const std::exception& e) {
+            setStatus("Failed to remove glyph: " + QString(e.what()), Status::Error);
             QMessageBox::warning(this, "Error",
                 QString("Failed to remove glyph:\n") + e.what());
         }
@@ -231,6 +264,7 @@ void MainWindow::replaceGlyphImage() {
         try {
             QFile file(imagePath);
             if (!file.open(QIODevice::ReadOnly)) {
+                setStatus("Cannot open image file", Status::Error);
                 QMessageBox::warning(this, "Error", "Cannot open image file");
                 return;
             }
@@ -243,12 +277,14 @@ void MainWindow::replaceGlyphImage() {
                 item->setText(2, QString::fromStdString(updated.format));
                 item->setText(3, QString("%1 bytes").arg(updated.data_size));
                 updateGlyphPreview();
-                statusLabel->setText("Image replaced for: " + glyphName);
+                setStatus("Image replaced for: " + glyphName, Status::Success);
                 btnSave->setEnabled(true);
             } else {
+                setStatus("Failed to replace glyph image", Status::Error);
                 QMessageBox::warning(this, "Error", "Failed to replace glyph image");
             }
         } catch (const std::exception& e) {
+            setStatus("Failed to replace image: " + QString(e.what()), Status::Error);
             QMessageBox::warning(this, "Error",
                 QString("Failed to replace image:\n") + e.what());
         }
@@ -266,7 +302,9 @@ void MainWindow::glyphSelectionChanged() {
 }
 
 void MainWindow::updateGlyphPreview() {
-    glyphPreview->clear();
+    previewTextLabel->setText("Select a glyph to preview");
+    previewImageLabel->clear();
+    previewImageLabel->hide();
 
     auto selectedItems = glyphTree->selectedItems();
     if (selectedItems.isEmpty() || !currentFont) return;
@@ -277,49 +315,35 @@ void MainWindow::updateGlyphPreview() {
     try {
         auto glyphInfo = currentFont->getGlyphInfo(glyphName.toStdString());
 
-        // Create a custom widget for the preview that includes both text and image
-        auto previewWidget = std::make_unique<QWidget>();
-        QVBoxLayout *previewLayout = new QVBoxLayout(previewWidget.get());
-
-        // Text info
         QString previewText = QString("Glyph: %1\nUnicode: U+%2\nFormat: %3\nSize: %4 bytes")
             .arg(glyphName)
-            .arg(glyphInfo.unicode, 4, 16, QChar('0')).toUpper()
+            .arg(QString::number(glyphInfo.unicode, 16).rightJustified(4, '0').toUpper())
             .arg(QString::fromStdString(glyphInfo.format))
             .arg(glyphInfo.data_size);
-
-        QLabel *textLabel = new QLabel(previewText);
-        textLabel->setWordWrap(true);
-        previewLayout->addWidget(textLabel);
 
         const auto png = fontmaster::renderGlyph(*currentFont, glyphName.toStdString(), 256);
         QPixmap pixmap;
         if (!pixmap.loadFromData(png.data(), static_cast<uint>(png.size()), "PNG"))
             throw fontmaster::FontException("Cannot decode rendered glyph preview");
-        auto* imageLabel = new QLabel();
-        imageLabel->setPixmap(pixmap.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        imageLabel->setAlignment(Qt::AlignCenter);
-        imageLabel->setMinimumSize(256, 256);
-        previewLayout->addWidget(imageLabel);
-
-        previewLayout->addStretch(); // Add stretch to push content to top
-
-        QListWidgetItem *listItem = new QListWidgetItem();
-        glyphPreview->addItem(listItem);
-        glyphPreview->setItemWidget(listItem, previewWidget.release());
+        previewTextLabel->setText(previewText);
+        previewImageLabel->setPixmap(pixmap);
+        previewImageLabel->show();
+        setStatus("Glyph preview: " + glyphName, Status::Success);
 
     } catch (const std::exception& e) {
-        QListWidgetItem *listItem = new QListWidgetItem("Error loading glyph details: " + QString(e.what()));
-        glyphPreview->addItem(listItem);
+        const QString message = "Error loading glyph details: " + QString(e.what());
+        previewTextLabel->setText(message);
+        setStatus(message, Status::Error);
     }
 }
 
 void MainWindow::clearFont() {
     currentFont.reset();
+    currentFontPath.clear();
     glyphTree->clear();
-    glyphPreview->clear();
+    updateGlyphPreview();
     fontInfoLabel->setText("No font loaded");
-    statusLabel->setText("Ready - No font loaded");
+    setStatus("Ready - No font loaded");
     btnSave->setEnabled(false);
     btnRemove->setEnabled(false);
     btnReplace->setEnabled(false);

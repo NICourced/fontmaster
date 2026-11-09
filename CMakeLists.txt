@@ -124,6 +124,18 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-version.txt" "${PROJECT_VERSI
 include(CTest)
 set(FONTMASTER_TEST_FONT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fonts" CACHE PATH "Font test fixtures")
 if(BUILD_TESTING)
+    if(TARGET fontmaster_qt)
+        add_executable(fontmaster_test_qt
+            tests/test_qt.cpp src/qt/MainWindow.cpp ${QT_HEADERS})
+        target_include_directories(fontmaster_test_qt PRIVATE src/qt)
+        target_link_libraries(fontmaster_test_qt PRIVATE fontmaster Qt5::Widgets)
+        if(EXISTS "${FONTMASTER_TEST_FONT_DIR}/NotoColorEmoji.ttf" AND
+           EXISTS "${FONTMASTER_TEST_FONT_DIR}/Noto-COLRv1.ttf")
+            add_test(NAME QtGui_preview COMMAND fontmaster_test_qt "${FONTMASTER_TEST_FONT_DIR}")
+            set_tests_properties(QtGui_preview PROPERTIES
+                ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+        endif()
+    endif()
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cbdt_cblc.cpp")
         add_executable(fontmaster_tests_cbdt tests/test_cbdt_cblc.cpp)
         target_link_libraries(fontmaster_tests_cbdt fontmaster)
