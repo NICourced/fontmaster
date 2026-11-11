@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
 To use an installed FontMaster library, save the example as `example.cpp` and add the following to your CMake project:
 
 ```cmake
-find_package(fontmaster 0.0.1 CONFIG REQUIRED)
+find_package(fontmaster 0.0.2 CONFIG REQUIRED)
 add_executable(example example.cpp)
 target_link_libraries(example PRIVATE fontmaster::fontmaster)
 ```

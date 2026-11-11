@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(fontmaster VERSION 0.0.1 LANGUAGES CXX)
+project(fontmaster VERSION 0.0.2 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(PkgConfig REQUIRED)
