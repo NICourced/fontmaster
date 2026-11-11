@@ -26,10 +26,26 @@ jobs:
 
       - name: Install build tools
         run: |
-          printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
-          printf '%s\n' 'https://security.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors-security.txt
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          ubuntu_mirror=
+          for candidate in https://mirrors.edge.kernel.org/ubuntu https://archive.ubuntu.com/ubuntu; do
+            host=${candidate#https://}
+            host=${host%%/*}
+            if timeout 5s getent ahostsv4 "$host" >/dev/null && \
+               curl --fail --location --silent --show-error --connect-timeout 5 --max-time 15 \
+                 "$candidate/dists/noble/InRelease" --output /dev/null; then
+              ubuntu_mirror=$candidate
+              break
+            fi
+          done
+          if [[ -z "$ubuntu_mirror" ]]; then
+            echo 'No reachable Ubuntu package mirror' >&2
+            exit 1
+          fi
+          printf '%s\n' "$ubuntu_mirror" | sudo tee /etc/apt/apt-mirrors.txt
+          printf '%s\n' "$ubuntu_mirror" | sudo tee /etc/apt/apt-mirrors-security.txt
+          apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15)
+          sudo apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
+          sudo apt-get "${apt_options[@]}" install -y --no-install-recommends \
             build-essential cmake ninja-build pkg-config meson curl nasm patchelf \
             libpng-dev libcairo2-dev librsvg2-dev libtiff-dev libxml2-dev zlib1g-dev \
             libfreetype-dev libglib2.0-dev qtbase5-dev qtbase5-dev-tools qtwayland5 \
