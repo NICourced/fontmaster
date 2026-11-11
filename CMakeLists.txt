@@ -241,7 +241,7 @@ install(TARGETS ${fontmaster_app_targets}
 install(DIRECTORY include/fontmaster DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h"
 )
-install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 set(fontmaster_cmake_dir "${CMAKE_INSTALL_LIBDIR}/cmake/fontmaster")
 configure_package_config_file(

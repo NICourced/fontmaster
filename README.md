@@ -4,7 +4,7 @@ Inspect, render and edit compiled OpenType fonts from C++ or the command line, w
 
 FontMaster works directly with binary `.ttf` and `.otf` files, including color emoji fonts. Use it to explore glyphs, export PNG previews, replace glyph artwork and save modified fonts.
 
-[Download](#download) · [Features](#features) · [Build](#build) · [Install](#install) · [Command line](#command-line) · [Desktop app](#desktop-app) · [C++ API](#c-api)
+[Download](#download) · [Features](#features) · [Build](#build) · [Install](#install) · [Command line](#command-line) · [Desktop app](#desktop-app) · [C++ API](#c-api) · [License](#license)
 
 ## Download
 
@@ -241,3 +241,9 @@ Run the resulting example with a font path as its argument. `Font` also exposes 
 Bug reports should include the command or steps to reproduce, the font format, the expected result and the actual output. Include a sample font or a source link when its license permits sharing.
 
 For code changes, build the project and run CTest before submitting a pull request. Changes to binary parsing or writing should include a regression test that checks the saved font after reloading it.
+
+## License
+
+FontMaster is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version (**GPL-3.0-or-later**). See [LICENSE](LICENSE) for the full license text.
+
+FontMaster is distributed without any warranty, including the implied warranties of merchantability or fitness for a particular purpose. Third-party dependencies and fonts retain their own licenses.
