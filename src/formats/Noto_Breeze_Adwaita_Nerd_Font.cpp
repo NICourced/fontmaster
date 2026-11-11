@@ -11,6 +11,7 @@ bool Noto_Breeze_Adwaita_Nerd_Font::removeGlyph(const std::string& name) { retur
 bool Noto_Breeze_Adwaita_Nerd_Font::removeGlyph(uint32_t unicode) { return implementation->removeGlyph(unicode); }
 bool Noto_Breeze_Adwaita_Nerd_Font::replaceGlyphImage(const std::string& name, const std::vector<uint8_t>& image) { return implementation->replaceGlyphImage(name, image); }
 std::vector<GlyphInfo> Noto_Breeze_Adwaita_Nerd_Font::listGlyphs() const { return implementation->listGlyphs(); }
+std::vector<GlyphInfo> Noto_Breeze_Adwaita_Nerd_Font::listGlyphMetadata() const { return implementation->listGlyphMetadata(); }
 GlyphInfo Noto_Breeze_Adwaita_Nerd_Font::getGlyphInfo(const std::string& name) const { return implementation->getGlyphInfo(name); }
 std::string Noto_Breeze_Adwaita_Nerd_Font::findGlyphName(uint32_t unicode) const { return implementation->findGlyphName(unicode); }
 } // namespace fontmaster

@@ -161,7 +161,8 @@ public:
         return true;
     }
 
-    std::vector<GlyphInfo> listGlyphs() const override {
+private:
+    std::vector<GlyphInfo> glyphList(bool includeImageData) const {
         std::set<uint16_t> ids;
         for (const auto& glyph : baseGlyphs) ids.insert(glyph.glyphID);
         for (const auto& entry : svg.glyphs) ids.insert(entry.first);
@@ -170,10 +171,15 @@ public:
         for (const auto gid : ids) {
             const auto document = svg.glyphs.find(gid);
             if (document == svg.glyphs.end()) result.push_back({getGlyphName(gid), getUnicodeFromGlyphID(gid), {}, "colr", 0});
-            else result.push_back({getGlyphName(gid), getUnicodeFromGlyphID(gid), *document->second, "svg", document->second->size()});
+            else result.push_back({getGlyphName(gid), getUnicodeFromGlyphID(gid),
+                includeImageData ? *document->second : std::vector<uint8_t>{}, "svg", document->second->size()});
         }
         return result;
     }
+
+public:
+    std::vector<GlyphInfo> listGlyphs() const override { return glyphList(true); }
+    std::vector<GlyphInfo> listGlyphMetadata() const override { return glyphList(false); }
 
     GlyphInfo getGlyphInfo(const std::string& name) const override {
         const auto gid = findGlyphID(name);

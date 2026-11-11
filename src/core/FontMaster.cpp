@@ -97,6 +97,12 @@ std::unique_ptr<Font> Font::load(const std::string& filepath) {
     return FontMasterImpl::instance().loadFont(filepath);
 }
 
+std::vector<GlyphInfo> Font::listGlyphMetadata() const {
+    auto glyphs = listGlyphs();
+    for (auto& glyph : glyphs) std::vector<uint8_t>().swap(glyph.image_data);
+    return glyphs;
+}
+
 void registerHandler(std::unique_ptr<FontFormatHandler> handler) {
     FontMasterImpl::instance().registerHandler(std::move(handler));
 }

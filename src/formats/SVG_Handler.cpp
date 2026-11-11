@@ -24,15 +24,15 @@ class SVGFont final : public Font {
     std::string filepath;
     std::unique_ptr<State> state;
 
-    GlyphInfo info(uint16_t gid) const {
+    GlyphInfo info(uint16_t gid, bool includeImageData = true) const {
         GlyphInfo result{};
         result.name = state->metadata.name(gid);
         result.unicode = state->metadata.unicode(gid);
         const auto document = state->svg.glyphs.find(gid);
         if (document == state->svg.glyphs.end()) result.format = "outline";
         else {
-            result.image_data = *document->second;
-            result.data_size = result.image_data.size();
+            if (includeImageData) result.image_data = *document->second;
+            result.data_size = document->second->size();
             result.format = "svg";
         }
         return result;
@@ -83,14 +83,18 @@ public:
         apply(std::move(svg));
         return true;
     }
-    std::vector<GlyphInfo> listGlyphs() const override {
+private:
+    std::vector<GlyphInfo> glyphList(bool includeImageData) const {
         std::vector<GlyphInfo> result;
         auto ids = state->outlines;
         for (const auto& entry : state->svg.glyphs) ids.insert(entry.first);
         result.reserve(ids.size());
-        for (const auto gid : ids) result.push_back(info(gid));
+        for (const auto gid : ids) result.push_back(info(gid, includeImageData));
         return result;
     }
+public:
+    std::vector<GlyphInfo> listGlyphs() const override { return glyphList(true); }
+    std::vector<GlyphInfo> listGlyphMetadata() const override { return glyphList(false); }
     GlyphInfo getGlyphInfo(const std::string& name) const override {
         const auto gid = state->metadata.resolve(name);
         if (!gid || (!state->svg.glyphs.count(*gid) && !state->outlines.count(*gid))) throw GlyphNotFoundException(name);

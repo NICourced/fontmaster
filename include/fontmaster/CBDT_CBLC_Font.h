@@ -25,6 +25,7 @@ public:
     bool replaceGlyphImage(const std::string& glyphName,
                           const std::vector<uint8_t>& newImage) override;
     std::vector<GlyphInfo> listGlyphs() const override;
+    std::vector<GlyphInfo> listGlyphMetadata() const override;
     GlyphInfo getGlyphInfo(const std::string& glyphName) const override;
     std::string findGlyphName(uint32_t unicode) const override;
     // CBDT/CBLC specific methods
@@ -32,6 +33,7 @@ public:
     const std::vector<uint16_t>& getRemovedGlyphs() const;
 
 private:
+    std::vector<GlyphInfo> glyphList(bool includeImageData) const;
     std::string filepath;
     std::vector<uint8_t> fontData;
     mutable std::unique_ptr<CBDT_CBLC_Parser> parser;

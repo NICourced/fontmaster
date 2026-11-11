@@ -86,7 +86,10 @@ bool CBDT_CBLC_Font::replaceGlyphImage(const std::string& name, const std::vecto
     return ensureParsed() && parser->replaceGlyphImage(findGlyphID(name), png);
 }
 
-std::vector<GlyphInfo> CBDT_CBLC_Font::listGlyphs() const {
+std::vector<GlyphInfo> CBDT_CBLC_Font::listGlyphs() const { return glyphList(true); }
+std::vector<GlyphInfo> CBDT_CBLC_Font::listGlyphMetadata() const { return glyphList(false); }
+
+std::vector<GlyphInfo> CBDT_CBLC_Font::glyphList(bool includeImageData) const {
     std::vector<GlyphInfo> result;
     if (!ensureParsed()) return result;
     std::set<uint16_t> seen;
@@ -98,9 +101,9 @@ std::vector<GlyphInfo> CBDT_CBLC_Font::listGlyphs() const {
             GlyphInfo info{};
             info.name = getGlyphName(gid, cachedNames);
             info.unicode = getUnicodeFromGlyphID(gid);
-            info.image_data = image.data;
+            if (includeImageData) info.image_data = image.data;
             info.format = getImageFormatString(image.imageFormat);
-            info.data_size = info.image_data.size();
+            info.data_size = image.data.size();
             result.push_back(std::move(info));
         }
     }

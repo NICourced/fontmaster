@@ -173,6 +173,17 @@ if(BUILD_TESTING)
             execute_process(COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}" -c "import fontTools"
                 RESULT_VARIABLE FONTMASTER_HAS_FONTTOOLS OUTPUT_QUIET ERROR_QUIET)
             if(FONTMASTER_HAS_FONTTOOLS EQUAL 0)
+                if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+                    set(fontmaster_memory_gui)
+                    if(TARGET fontmaster_test_qt)
+                        set(fontmaster_memory_gui "$<TARGET_FILE:fontmaster_test_qt>")
+                    endif()
+                    add_test(NAME GlyphListing_memory COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_listing_memory.py"
+                        "$<TARGET_FILE:fontmaster_cli>" "${FONTMASTER_TEST_FONT_DIR}"
+                        "${CMAKE_CURRENT_BINARY_DIR}" ${fontmaster_memory_gui})
+                    set_tests_properties(GlyphListing_memory PROPERTIES TIMEOUT 90)
+                endif()
                 add_test(NAME BinaryFonts_fonttools COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}"
                     "${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_binary_fonts.py"
                     "$<TARGET_FILE:fontmaster_cli>" "${FONTMASTER_TEST_FONT_DIR}"

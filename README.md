@@ -226,7 +226,7 @@ add_executable(example example.cpp)
 target_link_libraries(example PRIVATE fontmaster::fontmaster)
 ```
 
-Run the resulting example with a font path as its argument. `Font` also exposes `listGlyphs()`, `replaceGlyphImage()`, `removeGlyph()` and `save()`. The free `renderGlyph()` function uses the current in-memory font, including unsaved edits.
+Run the resulting example with a font path as its argument. `Font` also exposes `listGlyphMetadata()`, `listGlyphs()`, `replaceGlyphImage()`, `removeGlyph()` and `save()`. Use `listGlyphMetadata()` for names, formats and sizes without copying image payloads; fetch artwork for an individual glyph with `getGlyphInfo()`. `listGlyphs()` includes image payloads and can consume substantial memory when many glyphs share one SVG document. The free `renderGlyph()` function uses the current in-memory font, including unsaved edits.
 
 ## Editing behavior and limits
 

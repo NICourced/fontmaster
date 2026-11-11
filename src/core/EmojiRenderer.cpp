@@ -27,7 +27,7 @@ public:
         auto font = Font::load(path);
         if (!font) throw FontLoadException(path, "No font handler accepted the file");
         std::vector<std::pair<std::string, uint32_t>> result;
-        for (const auto& glyph : font->listGlyphs()) result.emplace_back(glyph.name, glyph.unicode);
+        for (const auto& glyph : font->listGlyphMetadata()) result.emplace_back(glyph.name, glyph.unicode);
         return result;
     }
 };

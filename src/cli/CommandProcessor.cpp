@@ -26,7 +26,7 @@ public:
         }
         std::cout << std::endl;
 
-        auto glyphs = font->listGlyphs();
+        auto glyphs = font->listGlyphMetadata();
         std::cout << "Glyphs count: " << glyphs.size() << std::endl;
 
         for (const auto& glyph : glyphs) {
@@ -34,7 +34,7 @@ public:
                       << " (U+" << std::hex << std::uppercase << std::setw(4)
                       << std::setfill('0') << glyph.unicode << std::dec << ")"
                       << " - " << glyph.format
-                      << " - " << glyph.image_data.size() << " bytes"
+                      << " - " << glyph.data_size << " bytes"
                       << std::endl;
         }
 

@@ -117,15 +117,15 @@ struct State {
 class StandardFont final : public Font {
     FontFormat format;
     std::unique_ptr<State> state;
-    GlyphInfo info(uint16_t gid) const {
+    GlyphInfo info(uint16_t gid, bool includeImageData = true) const {
         GlyphInfo result{};
         result.name = state->metadata.name(gid);
         result.unicode = state->metadata.unicode(gid);
         const auto found = state->svg.glyphs.find(gid);
         if (found != state->svg.glyphs.end()) {
             result.format = "svg";
-            result.image_data = *found->second;
-            result.data_size = result.image_data.size();
+            if (includeImageData) result.image_data = *found->second;
+            result.data_size = found->second->size();
         } else
             result.format = "outline";
         return result;
@@ -153,13 +153,17 @@ class StandardFont final : public Font {
             throw FontSaveException(path, "Cannot write font data");
         return true;
     }
-    std::vector<GlyphInfo> listGlyphs() const override {
+  private:
+    std::vector<GlyphInfo> glyphList(bool includeImageData) const {
         std::vector<GlyphInfo> result;
         result.reserve(state->active.size());
         for (const auto gid : state->active)
-            result.push_back(info(gid));
+            result.push_back(info(gid, includeImageData));
         return result;
     }
+  public:
+    std::vector<GlyphInfo> listGlyphs() const override { return glyphList(true); }
+    std::vector<GlyphInfo> listGlyphMetadata() const override { return glyphList(false); }
     GlyphInfo getGlyphInfo(const std::string &name) const override {
         const auto gid = state->metadata.resolve(name);
         if (!gid || !state->active.count(*gid))

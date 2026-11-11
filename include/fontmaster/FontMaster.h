@@ -84,6 +84,7 @@ public:
 
     // Утилиты
     virtual std::string findGlyphName(uint32_t unicode) const = 0;
+    virtual std::vector<GlyphInfo> listGlyphMetadata() const;
 };
 
 // New registration function

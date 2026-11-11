@@ -74,7 +74,7 @@ public:
             }
             std::cout << std::endl;
 
-            auto glyphs = font->listGlyphs();
+            auto glyphs = font->listGlyphMetadata();
             std::cout << "Glyphs count: " << glyphs.size() << std::endl;
 
             for (const auto& glyph : glyphs) {
@@ -266,7 +266,7 @@ public:
             }
             std::cout << std::endl;
 
-            auto glyphs = font->listGlyphs();
+            auto glyphs = font->listGlyphMetadata();
             std::cout << "  Glyph count: " << glyphs.size() << std::endl;
 
             size_t totalSize = 0;

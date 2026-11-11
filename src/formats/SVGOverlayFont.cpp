@@ -26,7 +26,7 @@ struct State {
         if (utils::hasTable(tables, "SVG ")) svg = SVGTable(tableBytes(bytes, "SVG "), metadata.count);
     }
     void mapBitmaps(const Font& primary) {
-        for (const auto& glyph : primary.listGlyphs()) {
+        for (const auto& glyph : primary.listGlyphMetadata()) {
             auto gid = metadata.resolve(glyph.name);
             if (!gid) {
                 const auto unicode = metadata.chars.find(glyph.unicode);
@@ -51,17 +51,18 @@ class SVGOverlayFont final : public Font {
         candidate->mapBitmaps(*primary);
         state = std::move(candidate);
     }
-    GlyphInfo info(uint16_t gid) const {
+    GlyphInfo info(uint16_t gid, bool includeImageData = true) const {
         GlyphInfo result{};
         const auto document = state->svg.glyphs.find(gid);
         if (document != state->svg.glyphs.end()) {
-            result.image_data = *document->second;
-            result.data_size = result.image_data.size();
+            if (includeImageData) result.image_data = *document->second;
+            result.data_size = document->second->size();
             result.format = "svg";
         } else {
             const auto bitmap = state->bitmapNames.find(gid);
             if (bitmap == state->bitmapNames.end()) throw GlyphNotFoundException(state->metadata.name(gid));
             result = primary->getGlyphInfo(bitmap->second);
+            if (!includeImageData) std::vector<uint8_t>().swap(result.image_data);
         }
         result.name = state->metadata.name(gid);
         result.unicode = state->metadata.unicode(gid);
@@ -105,15 +106,19 @@ public:
         if (!writeFontFile(path, state->data)) throw FontSaveException(path, "Cannot write font data");
         return true;
     }
-    std::vector<GlyphInfo> listGlyphs() const override {
+private:
+    std::vector<GlyphInfo> glyphList(bool includeImageData) const {
         std::set<uint16_t> ids;
         for (const auto& glyph : state->bitmapNames) ids.insert(glyph.first);
         for (const auto& glyph : state->svg.glyphs) ids.insert(glyph.first);
         std::vector<GlyphInfo> result;
         result.reserve(ids.size());
-        for (const auto gid : ids) result.push_back(info(gid));
+        for (const auto gid : ids) result.push_back(info(gid, includeImageData));
         return result;
     }
+public:
+    std::vector<GlyphInfo> listGlyphs() const override { return glyphList(true); }
+    std::vector<GlyphInfo> listGlyphMetadata() const override { return glyphList(false); }
     GlyphInfo getGlyphInfo(const std::string& name) const override {
         const auto gid = state->metadata.resolve(name);
         if (!gid || !state->contains(*gid)) throw GlyphNotFoundException(name);

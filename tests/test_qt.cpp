@@ -42,6 +42,24 @@ void checkStatus(QLabel* label, const QColor& background) {
 }
 
 struct MainWindowTest {
+    static void loadFont(const QString& path) {
+        MainWindow window;
+        window.show();
+        window.loadFont(path);
+        require(window.currentFont != nullptr, "Font failed to load into GUI");
+        require(window.glyphTree->topLevelItemCount() > 0, "GUI glyph list is empty");
+        settle();
+        checkStatus(window.statusLabel, QColor("#166534"));
+        const auto name = window.currentFont->findGlyphName(0x1F600);
+        const auto matches = window.glyphTree->findItems(
+            QString::fromStdString(name), Qt::MatchExactly, 0);
+        require(matches.size() == 1, "Cannot find smiling glyph in GUI");
+        window.glyphTree->setCurrentItem(matches.first());
+        checkVisiblePreview(window);
+        std::cout << "Loaded " << window.glyphTree->topLevelItemCount()
+                  << " glyphs and rendered a preview\n";
+    }
+
     static void run(const QString& fontDirectory) {
         MainWindow window;
         window.show();
@@ -99,8 +117,12 @@ struct MainWindowTest {
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
-    if (argc != 2) return 2;
+    if (argc != 2 && argc != 3) return 2;
     try {
+        if (argc == 3 && QString::fromLocal8Bit(argv[1]) == "--load-font") {
+            MainWindowTest::loadFont(QString::fromLocal8Bit(argv[2]));
+            return 0;
+        }
         MainWindowTest::run(QString::fromLocal8Bit(argv[1]));
         QPalette darkPalette = app.palette();
         darkPalette.setColor(QPalette::Window, QColor("#202020"));

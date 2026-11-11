@@ -31,6 +31,7 @@ public:
 
     // Information methods
     std::vector<GlyphInfo> listGlyphs() const override;
+    std::vector<GlyphInfo> listGlyphMetadata() const override;
     GlyphInfo getGlyphInfo(const std::string& glyphName) const override;
     std::string findGlyphName(uint32_t unicode) const override;
 };

@@ -175,7 +175,7 @@ class SBIX_Font final : public Font {
         State candidate(bytes);
         state = std::move(candidate);
     }
-    GlyphInfo info(uint16_t gid) const {
+    GlyphInfo info(uint16_t gid, bool includeImageData = true) const {
         for (const auto &strike : state.strikes) {
             if (strike.records[gid].empty())
                 continue;
@@ -183,7 +183,7 @@ class SBIX_Font final : public Font {
             GlyphInfo result{};
             result.name = state.metadata.name(gid);
             result.unicode = state.metadata.unicode(gid);
-            result.image_data = record.payload;
+            if (includeImageData) result.image_data = record.payload;
             result.data_size = record.payload.size();
             result.format = record.type == "png " ? "png" : record.type == "jpg " ? "jpg" : "tiff";
             return result;
@@ -205,13 +205,17 @@ class SBIX_Font final : public Font {
             throw FontSaveException(path, "Cannot write font data");
         return true;
     }
-    std::vector<GlyphInfo> listGlyphs() const override {
+  private:
+    std::vector<GlyphInfo> glyphList(bool includeImageData) const {
         std::vector<GlyphInfo> result;
         for (size_t gid = 0; gid < state.metadata.count; ++gid)
             if (contains(gid))
-                result.push_back(info(static_cast<uint16_t>(gid)));
+                result.push_back(info(static_cast<uint16_t>(gid), includeImageData));
         return result;
     }
+  public:
+    std::vector<GlyphInfo> listGlyphs() const override { return glyphList(true); }
+    std::vector<GlyphInfo> listGlyphMetadata() const override { return glyphList(false); }
     GlyphInfo getGlyphInfo(const std::string &name) const override {
         const auto gid = state.metadata.resolve(name);
         if (!gid)

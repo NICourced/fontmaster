@@ -35,6 +35,16 @@ int main(int argc, char** argv) {
                 auto font = Font::load((fonts / entry.first).string());
                 require(font != nullptr, std::string("Cannot load ") + entry.first);
                 auto glyphs = font->listGlyphs();
+                const auto summaries = font->listGlyphMetadata();
+                require(summaries.size() == glyphs.size(), "Metadata listing lost glyphs");
+                for (size_t i = 0; i < summaries.size(); ++i) {
+                    require(summaries[i].image_data.empty(), "Metadata listing copied artwork");
+                    require(summaries[i].name == glyphs[i].name &&
+                            summaries[i].unicode == glyphs[i].unicode &&
+                            summaries[i].format == glyphs[i].format &&
+                            summaries[i].data_size == glyphs[i].data_size,
+                            "Metadata listing changed glyph information");
+                }
                 require(glyphs.size() == entry.second, std::string(entry.first) + ": incorrect glyph count " + std::to_string(glyphs.size()));
                 for (const auto& glyph : glyphs) {
                     if (font->getFormat() == FontFormat::CBDT_CBLC) {

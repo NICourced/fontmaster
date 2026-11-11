@@ -176,12 +176,11 @@ void MainWindow::loadFont(const QString& filepath) {
                 default: formatStr = "Unknown"; break;
             }
 
-            auto glyphs = currentFont->listGlyphs();
             fontInfoLabel->setText(
                 QString("File: %1\nFormat: %2\nGlyphs: %3")
                     .arg(QFileInfo(filepath).fileName())
                     .arg(formatStr)
-                    .arg(glyphs.size())
+                    .arg(glyphTree->topLevelItemCount())
             );
 
             setStatus("Font loaded successfully", Status::Success);
@@ -204,7 +203,7 @@ void MainWindow::refreshGlyphList() {
 
     if (!currentFont) return;
 
-    auto glyphs = currentFont->listGlyphs();
+    auto glyphs = currentFont->listGlyphMetadata();
     for (const auto& glyph : glyphs) {
         QTreeWidgetItem *item = new QTreeWidgetItem(glyphTree);
         item->setText(0, QString::fromStdString(glyph.name));
