@@ -32,7 +32,7 @@ DESTDIR="$appdir" cmake --install "$build" --prefix /usr
 export APPIMAGE_EXTRACT_AND_RUN=1
 export ARCH=x86_64
 export VERSION="$version"
-export EXTRA_PLATFORM_PLUGINS=libqoffscreen.so
+export EXTRA_PLATFORM_PLUGINS='libqoffscreen.so;libqwayland-generic.so;libqwayland-egl.so'
 export OUTPUT="$output/FontMaster-$version-linux-x86_64.AppImage"
 export LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 libraries=()
@@ -43,12 +43,27 @@ while read -r name path; do
     esac
     libraries+=(--library "$path")
 done < <(ldd "$appdir/usr/bin/fontmaster_cli" | awk '$2 == "=>" && $3 ~ /^\// { print $1, $3 }')
+qt_plugins=$("${QMAKE:-qmake}" -query QT_INSTALL_PLUGINS)
+wayland_plugin_groups=(wayland-decoration-client wayland-graphics-integration-client wayland-shell-integration)
+mkdir -p "$appdir/usr/plugins"
+for group in "${wayland_plugin_groups[@]}"; do
+    cp -a "$qt_plugins/$group" "$appdir/usr/plugins/"
+    libraries+=(--deploy-deps-only "$appdir/usr/plugins/$group")
+done
 "$tools/linuxdeploy-x86_64.AppImage" --appdir "$appdir" \
     --executable "$appdir/usr/bin/fontmaster_qt" \
     --executable "$appdir/usr/bin/fontmaster_cli" \
     "${libraries[@]}" \
     --desktop-file "$source_dir/packaging/fontmaster.desktop" \
     --icon-file "$source_dir/packaging/fontmaster.svg" --plugin qt
+
+for platform in libqwayland-generic.so libqwayland-egl.so; do
+    test -s "$appdir/usr/plugins/platforms/$platform"
+done
+test -s "$appdir/usr/lib/libQt5WaylandClient.so.5"
+for group in "${wayland_plugin_groups[@]}"; do
+    compgen -G "$appdir/usr/plugins/$group/*.so" >/dev/null
+done
 
 notices="$appdir/usr/share/doc/fontmaster/third-party"
 mkdir -p "$notices"
