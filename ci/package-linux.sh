@@ -43,7 +43,20 @@ while read -r name path; do
     esac
     libraries+=(--library "$path")
 done < <(ldd "$appdir/usr/bin/fontmaster_cli" | awk '$2 == "=>" && $3 ~ /^\// { print $1, $3 }')
-qt_plugins=$("${QMAKE:-qmake}" -query QT_INSTALL_PLUGINS)
+qmake_bin=${QMAKE:-}
+if [[ -z $qmake_bin ]]; then
+    for candidate in qmake6 qmake /usr/lib/qt6/bin/qmake6 /usr/lib/qt5/bin/qmake; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            qmake_bin=$candidate
+            break
+        fi
+    done
+fi
+if [[ -z $qmake_bin ]]; then
+    echo "qmake6/qmake not found; cannot locate Qt plugins" >&2
+    exit 1
+fi
+qt_plugins=$("$qmake_bin" -query QT_INSTALL_PLUGINS)
 wayland_plugin_groups=(wayland-decoration-client wayland-graphics-integration-client wayland-shell-integration)
 mkdir -p "$appdir/usr/plugins"
 for group in "${wayland_plugin_groups[@]}"; do
@@ -60,7 +73,10 @@ done
 for platform in libqwayland-generic.so libqwayland-egl.so; do
     test -s "$appdir/usr/plugins/platforms/$platform"
 done
-test -s "$appdir/usr/lib/libQt5WaylandClient.so.5"
+if ! compgen -G "$appdir/usr/lib/libQt[56]WaylandClient.so.[56]" >/dev/null; then
+    echo "Qt Wayland client library was not deployed" >&2
+    exit 1
+fi
 for group in "${wayland_plugin_groups[@]}"; do
     compgen -G "$appdir/usr/plugins/$group/*.so" >/dev/null
 done
