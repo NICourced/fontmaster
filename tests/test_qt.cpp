@@ -42,6 +42,64 @@ void checkStatus(QLabel* label, const QColor& background) {
 }
 
 struct MainWindowTest {
+    static int visibleGlyphs(MainWindow& window) {
+        int count = 0;
+        for (int i = 0; i < window.glyphTree->topLevelItemCount(); ++i) {
+            if (!window.glyphTree->topLevelItem(i)->isHidden()) ++count;
+        }
+        return count;
+    }
+
+    static void search(const QString& path) {
+        MainWindow window;
+        window.show();
+        require(!window.searchEdit->isEnabled(), "Search enabled without a font");
+        window.loadFont(path);
+        settle();
+        require(window.searchEdit->isEnabled(), "Search disabled after font load");
+        require(window.glyphTree->topLevelItemCount() > 1,
+                "Not enough glyphs to test search");
+
+        const int total = window.glyphTree->topLevelItemCount();
+        const QString name = QString::fromStdString(
+            window.currentFont->findGlyphName(0x1F600));
+        require(!name.isEmpty(), "Test font has no U+1F600 glyph");
+
+        window.searchEdit->setText(name);
+        settle();
+        const int named = visibleGlyphs(window);
+        require(named >= 1 && named < total, "Search by name did not filter glyphs");
+        for (int i = 0; i < total; ++i) {
+            auto* item = window.glyphTree->topLevelItem(i);
+            if (item->isHidden()) continue;
+            bool matches = false;
+            for (int column = 0; column < 3; ++column) {
+                matches = matches || item->text(column).contains(name, Qt::CaseInsensitive);
+            }
+            require(matches, "Search left a non-matching glyph visible");
+        }
+
+        window.searchEdit->setText("1F600");
+        settle();
+        require(visibleGlyphs(window) >= 1, "Search by Unicode found nothing");
+
+        const auto matches = window.glyphTree->findItems(name, Qt::MatchExactly, 0);
+        require(matches.size() == 1, "Test glyph is missing from the tree");
+        window.glyphTree->setCurrentItem(matches.first());
+        window.searchEdit->setText("no-such-glyph-zzz");
+        settle();
+        require(visibleGlyphs(window) == 0, "Impossible query left glyphs visible");
+        require(window.glyphTree->selectedItems().isEmpty(),
+                "Filtering did not clear the hidden selection");
+        require(!window.btnRemove->isEnabled() && !window.btnReplace->isEnabled(),
+                "Editing actions stayed enabled without a visible selection");
+
+        window.searchEdit->clear();
+        settle();
+        require(visibleGlyphs(window) == total, "Clearing search did not restore glyphs");
+        std::cout << "Search filtered " << total << " glyphs\n";
+    }
+
     static void loadFont(const QString& path) {
         MainWindow window;
         window.show();
@@ -61,6 +119,8 @@ struct MainWindowTest {
     }
 
     static void run(const QString& fontDirectory) {
+        search(fontDirectory + "/NotoColorEmoji.ttf");
+
         MainWindow window;
         window.show();
         for (const auto& name : {"NotoColorEmoji.ttf", "Noto-COLRv1.ttf"}) {

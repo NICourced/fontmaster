@@ -5,6 +5,7 @@
 #include <QScrollArea>
 #include <QPushButton>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QVBoxLayout>
@@ -27,6 +28,7 @@ private slots:
     void replaceGlyphImage();
     void glyphSelectionChanged();
     void updateGlyphPreview();
+    void filterGlyphs(const QString& text);
 
 private:
     friend struct MainWindowTest;
@@ -39,6 +41,7 @@ private:
     void setStatus(const QString& message, Status status = Status::Neutral);
 
     QTreeWidget *glyphTree;
+    QLineEdit *searchEdit;
     QLabel *previewTextLabel;
     QLabel *previewImageLabel;
     QPushButton *btnOpen;

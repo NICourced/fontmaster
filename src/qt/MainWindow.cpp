@@ -6,6 +6,9 @@
 #include <QImage>
 #include <QIcon>
 #include <QLabel>
+#include <QLineEdit>
+#include <QAction>
+#include <QKeySequence>
 #include <QPainter>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -48,6 +51,14 @@ void MainWindow::setupUI() {
     controlLayout->addWidget(btnRemove);
     controlLayout->addWidget(btnReplace);
     leftLayout->addLayout(controlLayout);
+
+    // Поиск по глифам: имя, Unicode или формат
+    searchEdit = new QLineEdit(this);
+    searchEdit->setPlaceholderText("Search glyphs by name, Unicode or format...");
+    searchEdit->setClearButtonEnabled(true);
+    searchEdit->setToolTip("Filter the glyph list (Ctrl+F)");
+    searchEdit->setEnabled(false);
+    leftLayout->addWidget(searchEdit);
 
     // Список глифов
     glyphTree = new QTreeWidget(this);
@@ -98,6 +109,10 @@ void MainWindow::setupUI() {
     fileMenu->addSeparator();
     fileMenu->addAction("Exit", this, &QWidget::close);
 
+    QMenu *editMenu = menuBar()->addMenu("Edit");
+    QAction *findAction = editMenu->addAction("Find Glyph");
+    findAction->setShortcut(QKeySequence::Find);
+
     // Соединения
     connect(btnOpen, &QPushButton::clicked, this, &MainWindow::openFont);
     connect(btnSave, &QPushButton::clicked, this, &MainWindow::saveFont);
@@ -105,6 +120,12 @@ void MainWindow::setupUI() {
     connect(btnReplace, &QPushButton::clicked, this, &MainWindow::replaceGlyphImage);
     connect(glyphTree, &QTreeWidget::itemSelectionChanged,
             this, &MainWindow::glyphSelectionChanged);
+    connect(searchEdit, &QLineEdit::textChanged,
+            this, &MainWindow::filterGlyphs);
+    connect(findAction, &QAction::triggered, this, [this] {
+        searchEdit->setFocus();
+        searchEdit->selectAll();
+    });
 }
 
 void MainWindow::setStatus(const QString& message, Status status) {
@@ -163,6 +184,7 @@ void MainWindow::loadFont(const QString& filepath) {
         if (currentFont) {
             currentFontPath = filepath;
             refreshGlyphList();
+            searchEdit->setEnabled(true);
 
             // Обновляем информацию о шрифте
             QString formatStr;
@@ -217,6 +239,40 @@ void MainWindow::refreshGlyphList() {
     }
 
     glyphTree->header()->resizeSections(QHeaderView::ResizeToContents);
+    filterGlyphs(searchEdit->text());
+}
+
+void MainWindow::filterGlyphs(const QString& text) {
+    if (!glyphTree) return;
+
+    const QString query = text.trimmed();
+    const bool showAll = query.isEmpty();
+    QTreeWidgetItem *selected = glyphTree->selectedItems().isEmpty()
+        ? nullptr
+        : glyphTree->selectedItems().first();
+    bool selectionHidden = false;
+
+    for (int i = 0; i < glyphTree->topLevelItemCount(); ++i) {
+        QTreeWidgetItem *item = glyphTree->topLevelItem(i);
+        // Ищем по имени глифа, коду Unicode и формату (колонки 0-2).
+        bool visible = showAll;
+        for (int column = 0; !visible && column < 3; ++column) {
+            visible = item->text(column).contains(query, Qt::CaseInsensitive);
+        }
+        item->setHidden(!visible);
+        if (!visible && item == selected) {
+            selectionHidden = true;
+        }
+    }
+
+    // Скрытый выбранный элемент не должен оставлять активными действия
+    // Remove/Replace и устаревшее превью.
+    if (selectionHidden) {
+        glyphTree->clearSelection();
+        btnRemove->setEnabled(false);
+        btnReplace->setEnabled(false);
+        updateGlyphPreview();
+    }
 }
 
 void MainWindow::removeSelectedGlyph() {
@@ -340,6 +396,8 @@ void MainWindow::clearFont() {
     currentFont.reset();
     currentFontPath.clear();
     glyphTree->clear();
+    searchEdit->clear();
+    searchEdit->setEnabled(false);
     updateGlyphPreview();
     fontInfoLabel->setText("No font loaded");
     setStatus("Ready - No font loaded");
