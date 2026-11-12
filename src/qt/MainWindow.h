@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
+#include <cstdint>
+#include <vector>
 #include <QStatusBar>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -39,6 +41,8 @@ private:
     void refreshGlyphList();
     void clearFont();
     void setStatus(const QString& message, Status status = Status::Neutral);
+    bool replaceGlyphImageData(const QString& glyphName,
+                               const std::vector<uint8_t>& imageData);
 
     QTreeWidget *glyphTree;
     QLineEdit *searchEdit;
