@@ -5,7 +5,10 @@
 #include <QScrollArea>
 #include <QPushButton>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenuBar>
+#include <cstdint>
+#include <vector>
 #include <QStatusBar>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -27,6 +30,7 @@ private slots:
     void replaceGlyphImage();
     void glyphSelectionChanged();
     void updateGlyphPreview();
+    void filterGlyphs(const QString& text);
 
 private:
     friend struct MainWindowTest;
@@ -37,8 +41,11 @@ private:
     void refreshGlyphList();
     void clearFont();
     void setStatus(const QString& message, Status status = Status::Neutral);
+    bool replaceGlyphImageData(const QString& glyphName,
+                               const std::vector<uint8_t>& imageData);
 
     QTreeWidget *glyphTree;
+    QLineEdit *searchEdit;
     QLabel *previewTextLabel;
     QLabel *previewImageLabel;
     QPushButton *btnOpen;

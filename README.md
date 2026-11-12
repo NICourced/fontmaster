@@ -22,6 +22,7 @@ The packages use the host's graphics drivers and desktop services. Test fonts ar
 - Render glyphs to transparent PNG images at sizes from 1 to 4096 pixels.
 - Replace glyph artwork with PNG or SVG, depending on the font format.
 - Remove glyphs or color presentations, with checks for dependent glyphs.
+- Filter the glyph list by name, Unicode or format from the search bar (Ctrl+F in the desktop app).
 - Preview edits in memory before saving the font.
 - Use the same library through a CLI, a Qt interface or your own C++ application.
 
@@ -179,7 +180,7 @@ When Qt5 is installed, launch:
 ./build/fontmaster_qt
 ```
 
-Open a `.ttf` or `.otf` file to browse glyphs and preview their artwork. Select a glyph to replace its image or remove it, then save the modified font. Previews reflect the current edits before saving.
+Open a `.ttf` or `.otf` file to browse glyphs and preview their artwork. Use the search bar above the glyph list to filter by name, Unicode (for example `1F600`) or format; press Ctrl+F to focus it. Select a glyph to replace its image or remove it, then save the modified font. Previews reflect the current edits before saving.
 
 ## C++ API
 
