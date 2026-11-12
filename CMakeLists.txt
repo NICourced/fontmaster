@@ -102,6 +102,8 @@ else()
 endif()
 if(QT_FOUND)
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
+    file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-qt-tools.txt"
+        CONTENT "${QT_VERSION_MAJOR}\n$<TARGET_FILE:Qt${QT_VERSION_MAJOR}::qmake>\n")
 
     add_executable(fontmaster_qt
         src/qt/main.cpp
@@ -177,6 +179,11 @@ if(BUILD_TESTING)
         # Independent file validation is available when FontTools is installed.
         find_program(FONTMASTER_PYTHON_EXECUTABLE NAMES python3)
         if(FONTMASTER_PYTHON_EXECUTABLE)
+            if(TARGET fontmaster_qt AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+                add_test(NAME QtPackaging_settings COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qt_packaging.py"
+                    "${CMAKE_CURRENT_BINARY_DIR}")
+            endif()
             execute_process(COMMAND "${FONTMASTER_PYTHON_EXECUTABLE}" -c "import fontTools"
                 RESULT_VARIABLE FONTMASTER_HAS_FONTTOOLS OUTPUT_QUIET ERROR_QUIET)
             if(FONTMASTER_HAS_FONTTOOLS EQUAL 0)
