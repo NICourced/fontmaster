@@ -56,7 +56,7 @@ You need a C++17 compiler, CMake and `pkg-config`, plus the following developmen
 | libxml2 | `libxml-2.0` |
 | zlib | `zlib` |
 
-**Optional:** Qt5 Core and Widgets build the desktop app. Python 3 with FontTools enables additional output-validation tests; it is not required at runtime.
+**Optional:** Qt6 Core and Widgets build the desktop app (Qt5 is also supported). Python 3 with FontTools enables additional output-validation tests; it is not required at runtime.
 
 ### Compile
 
@@ -73,9 +73,9 @@ The build produces:
 | --- | --- |
 | `fontmaster` | Shared C++ library |
 | `fontmaster_cli` | Command-line application |
-| `fontmaster_qt` | Desktop application, built when Qt5 is available |
+| `fontmaster_qt` | Desktop application, built when Qt6 or Qt5 is available |
 
-To explicitly build without the desktop app, add `-DCMAKE_DISABLE_FIND_PACKAGE_Qt5=TRUE` to the configure command. To disable tests, add `-DBUILD_TESTING=OFF`.
+Qt6 is preferred when both versions are installed; configure with `-DFONTMASTER_QT_MAJOR=5` to build against Qt5 explicitly. To build without the desktop app, add `-DCMAKE_DISABLE_FIND_PACKAGE_QT=TRUE` to the configure command. To disable tests, add `-DBUILD_TESTING=OFF`.
 
 ## Install
 
@@ -174,7 +174,7 @@ For the full command syntax:
 
 ## Desktop app
 
-When Qt5 is installed, launch:
+When Qt6 (or Qt5) is installed, launch:
 
 ```sh
 ./build/fontmaster_qt

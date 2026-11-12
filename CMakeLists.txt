@@ -93,29 +93,34 @@ add_executable(fontmaster_cli
 
 target_link_libraries(fontmaster_cli fontmaster)
 
-# Qt GUI executable (optional - requires Qt)
-find_package(Qt5 COMPONENTS Core Widgets QUIET)
-if(Qt5_FOUND)
-    qt5_wrap_cpp(QT_HEADERS
-        src/qt/MainWindow.h
-    )
+# Qt GUI executable (optional - requires Qt 6 or Qt 5)
+set(FONTMASTER_QT_MAJOR "" CACHE STRING "Preferred Qt major version (5 or 6)")
+if(FONTMASTER_QT_MAJOR)
+    find_package(QT NAMES Qt${FONTMASTER_QT_MAJOR} COMPONENTS Core Widgets QUIET)
+else()
+    find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets QUIET)
+endif()
+if(QT_FOUND)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 
     add_executable(fontmaster_qt
         src/qt/main.cpp
         src/qt/MainWindow.cpp
-        ${QT_HEADERS}
+        src/qt/MainWindow.h
     )
 
-    target_link_libraries(fontmaster_qt fontmaster Qt5::Core Qt5::Widgets)
+    target_link_libraries(fontmaster_qt fontmaster
+        Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets)
     target_compile_definitions(fontmaster_qt PRIVATE FONTMASTER_VERSION="${PROJECT_VERSION}")
 
-    # Set Qt specific properties
+    # AUTOMOC covers both Qt 6 and Qt 5.
     set_target_properties(fontmaster_qt PROPERTIES
+        AUTOMOC ON
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON
     )
 else()
-    message(WARNING "Qt5 not found - skipping fontmaster_qt target")
+    message(WARNING "Qt6/Qt5 not found - skipping fontmaster_qt target")
 endif()
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/fontmaster-version.txt" "${PROJECT_VERSION}\n")
@@ -126,9 +131,11 @@ set(FONTMASTER_TEST_FONT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fonts" CACHE PATH "Fon
 if(BUILD_TESTING)
     if(TARGET fontmaster_qt)
         add_executable(fontmaster_test_qt
-            tests/test_qt.cpp src/qt/MainWindow.cpp ${QT_HEADERS})
+            tests/test_qt.cpp src/qt/MainWindow.cpp src/qt/MainWindow.h)
         target_include_directories(fontmaster_test_qt PRIVATE src/qt)
-        target_link_libraries(fontmaster_test_qt PRIVATE fontmaster Qt5::Widgets)
+        target_link_libraries(fontmaster_test_qt PRIVATE fontmaster
+            Qt${QT_VERSION_MAJOR}::Widgets)
+        set_target_properties(fontmaster_test_qt PROPERTIES AUTOMOC ON)
         if(EXISTS "${FONTMASTER_TEST_FONT_DIR}/NotoColorEmoji.ttf" AND
            EXISTS "${FONTMASTER_TEST_FONT_DIR}/Noto-COLRv1.ttf")
             add_test(NAME QtGui_preview COMMAND fontmaster_test_qt "${FONTMASTER_TEST_FONT_DIR}")
